@@ -1,0 +1,3128 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#101214">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>今日训练 · GYM</title>
+<style>
+  :root{
+    --bg:#101214;
+    --card:#1C1F23;
+    --card-hi:#232830;
+    --accent:#C8F542;
+    --accent-soft:rgba(200,245,66,.12);
+    --text:#F5F5F5;
+    --muted:#8A9099;
+    --line:rgba(255,255,255,.07);
+    --radius:12px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
+    font-size:15px;line-height:1.45;overscroll-behavior:none;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer;padding:0}
+  input{font-family:inherit}
+  p,h1,h2,h3{margin:0}
+  .hidden{display:none !important}
+
+  .app{
+    position:relative;max-width:520px;margin:0 auto;height:100vh;height:100dvh;overflow:hidden;
+    background:
+      radial-gradient(420px 260px at 50% -80px, rgba(200,245,66,.08), transparent 70%),
+      var(--bg);
+  }
+  .screen{position:absolute;inset:0;display:none;flex-direction:column;min-height:0}
+  .screen.active{display:flex;animation:screenIn .22s ease}
+  #screen-paused.active{animation:none}
+  @keyframes screenIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 20px 20px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .scroll::-webkit-scrollbar{display:none}
+
+  .eyebrow{font-size:10.5px;letter-spacing:.18em;color:var(--muted);font-weight:700;text-transform:uppercase}
+  .page-head{padding:calc(env(safe-area-inset-top,0px) + 24px) 20px 4px}
+  .page-head h1{font-size:30px;line-height:1.16;font-weight:800;letter-spacing:-.02em;margin-top:7px}
+  .page-head .sub{font-size:13px;color:var(--muted);margin-top:8px}
+  /* 胶囊描边小按钮（清空 / 保存组合预设） */
+  .pill-btn{
+    flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:5px;
+    padding:6px 14px;border-radius:999px;background:transparent;
+    border:1px solid #3A3F45;color:#8A9099;font-size:13px;font-weight:700;line-height:1;
+    transition:border-color .15s,color .15s;
+  }
+  .pill-btn svg{flex:0 0 auto}
+  .pill-btn:active{border-color:var(--accent);color:var(--accent)}
+  .pill-btn.arm{border-color:#E24B4A;color:#E24B4A}
+  .pill-btn.arm:active{border-color:#E24B4A;color:#E24B4A}
+  .lbls{display:grid;align-items:center}
+  .lbls span{grid-area:1/1;white-space:nowrap}
+  .lbls .b{visibility:hidden}
+  .pill-btn.arm .lbls .a{visibility:hidden}
+  .pill-btn.arm .lbls .b{visibility:visible}
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;margin:24px 0 12px}
+  .section-head h2{font-size:15px;font-weight:700;letter-spacing:.02em}
+  .section-head span{font-size:12px;color:var(--muted)}
+
+  .btn{
+    width:100%;height:56px;border-radius:14px;font-size:17px;font-weight:800;letter-spacing:.01em;
+    display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .12s,filter .12s,background .2s;
+  }
+  .btn:active{transform:scale(.985)}
+  .btn.primary{background:var(--accent);color:#0B0D0F;box-shadow:0 10px 28px rgba(200,245,66,.14)}
+  .btn.primary:active{filter:brightness(.94)}
+  .btn.primary:disabled{background:#22262B;color:#5E656D;box-shadow:none;transform:none}
+  .btn.ghost{background:var(--card-hi);color:var(--text);border:1px solid var(--line)}
+  .btn.danger{background:#2A1D1D;color:#FF7C7C;border:1px solid rgba(255,124,124,.18)}
+  /* 描边主色按钮（暂停训练） */
+  .btn.outline{background:transparent;color:var(--accent);border:1px solid rgba(200,245,66,.55)}
+  .btn.outline:active{background:rgba(200,245,66,.08)}
+  .btn.big{height:64px;font-size:18px;border-radius:16px}
+  .btn.sm{height:42px;font-size:13px;border-radius:10px}
+
+  .icon-btn{
+    width:42px;height:42px;flex:0 0 auto;border-radius:12px;background:var(--card);
+    border:1px solid var(--line);display:grid;place-items:center;color:var(--text);
+  }
+  .icon-btn:active{background:var(--card-hi)}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .card + .card{margin-top:12px}
+
+  .bottom-bar{
+    flex:0 0 auto;padding:12px 20px calc(env(safe-area-inset-bottom,0px) + 12px);
+    background:rgba(16,18,20,.94);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border-top:1px solid var(--line);
+  }
+  .bar-info{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
+  .bar-info span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar-info strong{font-size:14px;font-weight:800;color:var(--accent);white-space:nowrap}
+
+  /* ---------- home ---------- */
+  .cal-entry{
+    margin-top:18px;background:linear-gradient(155deg,#232A1B,#1C1F23);
+    border:1px solid rgba(200,245,66,.35);border-radius:var(--radius);padding:16px;
+    display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;
+  }
+  .cal-entry::after{content:'';position:absolute;right:-30px;top:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(200,245,66,.18),transparent 65%)}
+  .cal-icon{width:44px;height:44px;border-radius:12px;background:var(--accent);color:#0B0D0F;display:grid;place-items:center;flex:0 0 auto;position:relative}
+  .cal-icon svg{width:22px;height:22px}
+  .cal-entry .txt{flex:1;min-width:0;position:relative}
+  .cal-entry .txt .t{font-size:16px;font-weight:800}
+  .cal-entry .txt .s{font-size:12px;color:var(--muted);margin-top:2px}
+  .cal-entry .chev{color:var(--accent);position:relative}
+  .cal-entry .month-badge{
+    position:absolute;right:14px;top:0;z-index:2;background:var(--accent);color:#0B0D0F;
+    font-size:10px;font-weight:800;line-height:1.5;padding:2px 8px;border-radius:0 0 6px 6px;
+  }
+
+  .part-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .part-card{
+    position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+    padding:16px 15px 14px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    text-align:left;min-height:112px;transition:border-color .18s,background .18s,transform .12s;overflow:hidden;
+  }
+  .part-card::after{
+    content:attr(data-char);position:absolute;right:2px;bottom:-22px;font-size:76px;font-weight:800;
+    color:rgba(255,255,255,.028);line-height:1;pointer-events:none;
+  }
+  .part-card:active{transform:scale(.975)}
+  .part-card.selected{border-color:rgba(200,245,66,.55);background:linear-gradient(155deg,#232A1B,#1C1F23 72%)}
+  .part-top{display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px}
+  .part-name{font-size:21px;font-weight:800;letter-spacing:-.01em;position:relative;z-index:1}
+  .part-flag{
+    min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:var(--accent);color:#0B0D0F;
+    font-size:11px;font-weight:800;display:grid;place-items:center;
+  }
+  .part-en{font-size:9.5px;letter-spacing:.16em;color:var(--muted);font-weight:700;margin-top:2px}
+  .part-count{font-size:11.5px;color:var(--muted);margin-top:22px;position:relative;z-index:1}
+  .part-card.selected .part-en{color:rgba(200,245,66,.7)}
+  .part-card.selected .part-count{color:var(--accent)}
+
+  .hint{
+    display:flex;gap:10px;align-items:flex-start;margin-top:18px;padding:14px;
+    border-radius:var(--radius);background:#15181B;border:1px dashed rgba(255,255,255,.09);
+    color:var(--muted);font-size:12px;line-height:1.6;
+  }
+  .hint svg{flex:0 0 auto;color:var(--accent);margin-top:1px}
+  .hint b{color:var(--text);font-weight:600}
+
+  /* ---------- library ---------- */
+  .lib-head{
+    display:flex;align-items:center;gap:14px;
+    padding:calc(env(safe-area-inset-top,0px) + 16px) 20px 8px;
+  }
+  .lib-head .titles{flex:1;min-width:0}
+  .lib-head h2{font-size:24px;font-weight:800;line-height:1.2;margin-top:3px}
+  .lib-sub{font-size:11px;color:var(--muted);margin-top:5px}
+  .lib-head .titles .eyebrow,.lib-head .titles h2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lib-tip{padding:10px 20px 6px;font-size:12px;color:var(--muted)}
+
+  /* ---------- home: 已选部位 / 组合预设 ---------- */
+  .sel-block{margin-top:20px}
+  .sel-block .section-head{margin:0 0 10px}
+  .sel-block .section-head h2{font-size:15px;font-weight:700}
+  .sel-parts{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+  .sel-parts::-webkit-scrollbar{display:none}
+  .sel-part{
+    flex:0 0 auto;display:flex;align-items:baseline;gap:7px;padding:9px 12px;border-radius:10px;
+    background:var(--card);border:1px solid rgba(200,245,66,.32);
+  }
+  .sel-part .nm{font-size:13px;font-weight:800;color:var(--accent)}
+  .sel-part .ct{font-size:10.5px;color:var(--muted)}
+  .sel-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+  .sel-actions .pill-btn{min-width:0}
+  .sel-actions .lbls{min-width:0;overflow:hidden}
+  .sel-actions .lbls span{overflow:hidden;text-overflow:ellipsis}
+  .sel-list{margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:2px 12px}
+  .sel-item{display:flex;align-items:center;gap:8px;padding:9px 0;font-size:13px}
+  .sel-item + .sel-item{border-top:.5px solid #262A2F}
+  .sel-item .pn{
+    flex:0 0 auto;font-size:10px;font-weight:800;color:var(--accent);
+    background:var(--accent-soft);padding:2px 6px;border-radius:5px;
+  }
+  .sel-item .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sel-item .mt{flex:0 0 auto;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .combo-block{margin-top:22px}
+  .combo-block .section-head{margin:0 0 10px}
+  .combo-row{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+  .combo-row::-webkit-scrollbar{display:none}
+  .combo-card{
+    flex:0 0 auto;min-width:148px;max-width:210px;display:flex;align-items:flex-start;gap:4px;
+    padding:12px 10px 12px 14px;background:var(--card);border:1px solid var(--line);border-radius:12px;
+  }
+  .combo-main{flex:1;min-width:0;text-align:left;display:flex;flex-direction:column;gap:4px}
+  .combo-main .cn{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .combo-main .cs{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .combo-more{flex:0 0 auto;color:var(--muted);font-size:13px;line-height:1;padding:1px 0 3px 6px}
+
+  .presets-block{margin:8px 20px 6px}
+  .presets-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .presets-head h3{font-size:12px;letter-spacing:.12em;color:var(--muted);font-weight:700}
+  .presets-head button{font-size:11px;color:var(--accent);font-weight:700}
+  .preset-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+  .preset-row::-webkit-scrollbar{display:none}
+  .preset-chip{
+    flex:0 0 auto;padding:9px 13px;border-radius:10px;background:var(--card);
+    border:1px solid var(--line);font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;
+  }
+  .preset-chip .n{font-weight:800}
+  .preset-chip .c{font-size:10px;color:var(--muted)}
+
+  .subgroup{margin-top:16px}
+  .subgroup-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .subgroup-head .bar{width:3px;height:14px;background:var(--accent);border-radius:2px}
+  .subgroup-head span{font-size:13px;font-weight:800;color:var(--text)}
+
+  .ex-card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:10px;
+    transition:border-color .16s,background .16s;
+  }
+  .ex-card.selected{border-color:rgba(200,245,66,.5);background:#20261A}
+  .ex-top{padding:14px 14px 12px}
+  .ex-head{display:flex;align-items:center;gap:10px}
+  .ex-name{
+    flex:1;min-width:0;font-size:20px;font-weight:800;letter-spacing:-.01em;line-height:1.25;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .ex-meta{
+    display:block;font-size:11px;color:var(--muted);margin-top:6px;
+    font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .check{
+    width:24px;height:24px;flex:0 0 24px;border-radius:50%;border:2px solid #3B424B;
+    display:grid;place-items:center;color:#0B0D0F;transition:background .15s,border-color .15s;
+  }
+  .ex-card.selected .check{cursor:pointer}
+  .ex-card.selected .check{background:var(--accent);border-color:var(--accent)}
+  .params{
+    display:flex;align-items:stretch;margin:0 14px 14px;padding:8px 0;
+    background:var(--bg);border-radius:10px;
+  }
+  .param{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 9px}
+  .param + .param{border-left:.5px solid #2A2E33}
+  .param .k{font-size:11px;line-height:1;letter-spacing:.1em;color:#8A9099}
+  .param .v{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:7px;width:100%}
+  .param .v .n{
+    flex:1;min-width:0;text-align:center;white-space:nowrap;overflow:hidden;
+    font-size:clamp(14px,4vw,17px);font-weight:800;color:var(--accent);
+    font-variant-numeric:tabular-nums;line-height:1.1;
+  }
+  .param .v .n.sm{font-size:clamp(11px,3.2vw,14px)}
+  .pbtn{
+    width:28px;height:28px;flex:0 0 28px;border-radius:50%;position:relative;
+    background:transparent;border:1px solid #3A3F45;color:#B9BFC6;
+    padding:0;font-size:0;line-height:0;
+    transition:border-color .15s,color .15s;
+  }
+  /* 用几何线条画 +/-，保证笔画在圆圈里绝对居中 */
+  .pbtn::before,.pbtn::after{
+    content:'';position:absolute;left:50%;top:50%;background:currentColor;border-radius:1px;
+    transform:translate(-50%,-50%);
+  }
+  .pbtn::before{width:11px;height:1.5px}
+  .pbtn::after{width:1.5px;height:11px}
+  .pbtn[data-act$="-"]::after{display:none}
+  .pbtn:active{border-color:var(--accent);color:var(--accent)}
+  .ex-card:not(.selected) .params{display:none}
+  .ex-more{
+    width:26px;height:26px;flex:0 0 26px;border-radius:8px;
+    display:grid;place-items:center;color:var(--muted);background:transparent;
+    transition:color .15s,background .15s;
+  }
+  .ex-more:active{color:var(--accent);background:rgba(200,245,66,.1)}
+  .subgroup-head .my-hint{margin-left:auto;font-size:10.5px;font-weight:600;color:#666D76}
+
+  .add-custom{
+    display:flex;align-items:center;gap:10px;width:100%;padding:14px;margin-bottom:10px;
+    background:rgba(200,245,66,.06);border:1px dashed rgba(200,245,66,.4);
+    border-radius:var(--radius);color:var(--accent);font-size:14px;font-weight:700;
+  }
+  .add-custom .plus{width:24px;height:24px;border-radius:7px;background:var(--accent);color:#0B0D0F;font-size:18px;font-weight:800;display:grid;place-items:center}
+
+  /* ---------- plan ---------- */
+  .plan-scroll{padding-top:14px}
+  .plan-hero{
+    position:relative;overflow:hidden;text-align:center;padding:22px 16px 20px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  }
+  .plan-hero::after{
+    content:'';position:absolute;left:50%;top:-120px;width:320px;height:220px;transform:translateX(-50%);
+    background:radial-gradient(circle,rgba(200,245,66,.12),transparent 68%);pointer-events:none;
+  }
+  .plan-hero .k{font-size:11px;letter-spacing:.14em;color:var(--muted);font-weight:700;position:relative}
+  .big-time{display:flex;align-items:baseline;justify-content:center;gap:7px;margin:8px 0 2px;position:relative}
+  .big-time span{font-size:58px;line-height:1;font-weight:800;letter-spacing:-.04em;color:var(--accent);font-variant-numeric:tabular-nums}
+  .big-time small{font-size:15px;color:var(--muted);font-weight:600}
+  .plan-sub{font-size:12.5px;color:var(--muted);margin-top:5px;position:relative}
+  .card-title{font-size:12px;letter-spacing:.1em;color:var(--muted);font-weight:700;margin-bottom:4px}
+  .target-card{margin-top:12px}
+  .target-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .target-row .k{font-size:14px;color:var(--muted)}
+  .target-value{font-size:20px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+  .scale{display:flex;justify-content:space-between;font-size:10px;color:#5F656D;padding:0 2px}
+  .slider-tip{display:block;font-size:11px;line-height:1.4;color:#666D76;margin-top:10px}
+  .presets{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+  .preset{
+    height:42px;border-radius:10px;background:var(--card-hi);border:1px solid var(--line);
+    color:var(--text);font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;
+  }
+  .preset.active{background:var(--accent-soft);border-color:rgba(200,245,66,.55);color:var(--accent)}
+
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:34px;background:transparent;margin:4px 0 0;
+  }
+  input[type=range]::-webkit-slider-runnable-track{
+    height:6px;border-radius:3px;
+    background:linear-gradient(to right,var(--accent) var(--fill,50%),#2C3137 var(--fill,50%));
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--accent);
+    margin-top:-10px;box-shadow:0 0 0 6px rgba(200,245,66,.13);
+  }
+  input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:#2C3137}
+  input[type=range]::-moz-range-progress{height:6px;border-radius:3px;background:var(--accent)}
+  input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radius:50%;background:var(--accent)}
+
+  .compare{display:grid;grid-template-columns:1fr 16px 1fr;gap:6px;align-items:stretch;margin-top:12px}
+  .cmp{padding:14px 13px;border-radius:var(--radius);background:var(--card);border:1px solid var(--line)}
+  .cmp.after{background:linear-gradient(155deg,rgba(200,245,66,.11),#1C1F23 85%);border-color:rgba(200,245,66,.42)}
+  .cmp .k{font-size:10px;letter-spacing:.12em;color:var(--muted);font-weight:700}
+  .cmp .num{display:flex;align-items:baseline;gap:3px;font-size:27px;font-weight:800;margin:5px 0 2px;font-variant-numeric:tabular-nums}
+  .cmp .num small{font-size:11px;color:var(--muted);font-weight:600}
+  .cmp.after .num{color:var(--accent)}
+  .cmp .sub{font-size:11px;color:var(--muted)}
+  .cmp-arrow{display:grid;place-items:center;color:#4C535C}
+
+  .change-card{margin-top:10px}
+  .change-row{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .change-row:last-child{border-bottom:0;padding-bottom:2px}
+  .change-row .name{color:var(--text)}
+  .change-row .diff{color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+  .change-row .diff b{color:var(--accent);font-weight:700}
+  .warn{
+    margin-top:10px;padding:12px 14px;border-radius:10px;background:#241F14;border:1px solid rgba(255,180,60,.18);
+    color:#E8B75C;font-size:12px;line-height:1.6;
+  }
+  .note-card{
+    display:flex;align-items:center;gap:10px;margin-top:12px;font-size:12.5px;color:var(--muted);
+    background:#15181B;border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;line-height:1.55;
+  }
+  .note-card .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:0 0 auto}
+
+  /* ============ 热身页 ============ */
+  .warm-stage .warm-big-time{
+    font-size:clamp(78px,26vw,104px);line-height:1;font-weight:800;letter-spacing:-.04em;
+    color:var(--accent);font-variant-numeric:tabular-nums;text-shadow:0 0 50px rgba(200,245,66,.22);
+  }
+
+  .plan-list{margin-top:18px}
+  .plan-card{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 12px 4px;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  }
+  .plan-card-head{
+    display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;
+  }
+  .plan-card-title{
+    font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.04em;
+  }
+  .plan-card-count{
+    font-size:10.5px;color:var(--accent);background:rgba(200,245,66,.12);
+    padding:2px 7px;border-radius:999px;font-weight:700;
+  }
+  #planList{display:flex;flex-direction:column;gap:6px}
+  .plan-hint{margin:6px 2px 0;font-size:11px;color:var(--muted);text-align:left;letter-spacing:.02em;opacity:.7}
+  .plan-item{
+    position:relative;overflow:hidden;
+    display:flex;align-items:center;gap:10px;
+    padding:12px 12px;border-radius:10px;
+    background:var(--card-hi);border:1px solid rgba(255,255,255,.09);
+    transition:transform .28s cubic-bezier(.2,.8,.2,1), box-shadow .2s, border-color .2s, background .2s;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  }
+  .plan-item .big-num{
+    position:absolute;right:4px;bottom:-18px;z-index:1;pointer-events:auto;
+    cursor:grab;
+    font-size:62px;font-weight:800;color:rgba(255,255,255,.03);line-height:1;
+    font-variant-numeric:tabular-nums;letter-spacing:-.04em;
+  }
+  .plan-item .big-num:active{cursor:grabbing}
+  .plan-item.dragging .big-num{cursor:grabbing}
+  .plan-item .pt{
+    position:absolute;left:12px;top:50%;transform:translateY(-50%);
+    font-size:10px;font-weight:800;color:var(--accent);
+    background:var(--accent-soft);padding:4px 7px;border-radius:6px;
+    height:auto;display:inline-flex;align-items:center;line-height:1.1;
+    z-index:2;
+  }
+  .pi-main{
+    flex:1;min-width:0;position:relative;z-index:2;padding:0 42px 0 42px;
+  }
+  .pi-top{display:flex;align-items:center;gap:4px;min-width:0}
+  .plan-item .nm{
+    flex:1 1 auto;min-width:0;font-size:14px;font-weight:700;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .plan-item .meta{
+    flex:0 0 auto;font-size:11px;color:var(--muted);
+    font-variant-numeric:tabular-nums;white-space:nowrap;
+  }
+  .plan-item.dragging{
+    z-index:6;background:var(--card-hi);border-color:var(--accent);
+    box-shadow:0 12px 32px rgba(0,0,0,.5);transition:none !important;
+  }
+  .plan-item.dragging .pt{color:var(--accent);filter:brightness(1.15)}
+  .plan-promote{
+    position:absolute;right:10px;top:50%;transform:translateY(-50%);
+    width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+    color:var(--muted);background:transparent;transition:color .15s,background .15s,transform .15s;
+    z-index:2;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  }
+  .plan-grip{display:none}
+  .plan-promote:active, .plan-grip:active{color:var(--accent);background:rgba(200,245,66,.1);transform:translateY(-50%) scale(.9)}
+  .plan-promote svg, .plan-grip svg{pointer-events:none}
+  .plan-drop-before{box-shadow:inset 0 3px 0 var(--accent)}
+  .plan-drop-after{box-shadow:inset 0 -3px 0 var(--accent)}
+
+  .water-row{
+    display:flex;align-items:center;gap:10px;width:100%;padding:16px;margin-top:12px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);text-align:left;
+  }
+  .water-row .wicon{width:34px;height:34px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:0 0 auto}
+  .water-row .wk{flex:1;min-width:0;font-size:14px}
+  .water-row .wv{font-size:13px;font-weight:700;color:var(--accent);white-space:nowrap}
+  .water-row .chev{color:#565D66;flex:0 0 auto}
+
+  /* ---------- training ---------- */
+  .train{
+    background:
+      radial-gradient(360px 240px at 50% 0%, rgba(200,245,66,.075), transparent 70%),
+      var(--bg);
+  }
+  .train-head{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 14px) 18px 4px}
+  .progress{flex:1;height:4px;border-radius:2px;background:#262B31;overflow:hidden}
+  .progress i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px;transition:width .3s ease}
+  .water-btn{
+    display:flex;align-items:center;gap:6px;height:38px;padding:0 10px;border-radius:10px;
+    background:var(--card);border:1px solid var(--line);color:var(--accent);
+    font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;flex:0 0 auto;
+  }
+  /* 该喝水了但还在做动作：按钮闪烁等待，进入休息后再弹提醒 */
+  .water-btn.due{animation:waterBlink 1.1s ease-in-out infinite;border-color:rgba(200,245,66,.55)}
+  @keyframes waterBlink{0%,100%{opacity:1}50%{opacity:.35}}
+  .train-meta{display:flex;align-items:center;justify-content:space-between;padding:10px 20px 0}
+  .tag{font-size:10px;font-weight:800;letter-spacing:.14em;color:var(--accent);background:var(--accent-soft);padding:5px 9px;border-radius:6px}
+  .elapsed{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  .work-stage,.rest-stage{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:0 20px calc(env(safe-area-inset-bottom,0px) + 16px)}
+  .work-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:0}
+  #trainName{flex:0 0 auto;font-size:clamp(26px,8vw,32px);line-height:1.2;font-weight:800;letter-spacing:-.02em}
+  .bar-load{width:100%;max-width:272px;margin:22px 0 0;display:flex;flex-direction:column;align-items:center}
+  #trainName{order:1}
+  .rep-block{order:2}
+  .bar-load{order:3}
+  #trainHint{order:4}
+  .bar-svg{width:100%;height:auto;display:block}
+  .bar-cap{font-size:12.5px;color:var(--muted);letter-spacing:.06em;margin-top:2px;font-variant-numeric:tabular-nums}
+  .bar-cap b{color:var(--text);font-weight:800}
+  .bar-cur{animation:barPulse 2s ease-in-out infinite}
+  @keyframes barPulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .rep-block{display:grid;grid-template-columns:1fr auto 1fr;align-items:baseline;width:100%;margin:4px 0 0}
+  .rep-num{
+    grid-column:2;justify-self:center;
+    font-size:clamp(58px,19vw,78px);line-height:1;font-weight:800;letter-spacing:-.045em;
+    color:var(--accent);font-variant-numeric:tabular-nums;text-shadow:0 0 40px rgba(200,245,66,.2);
+  }
+  .rep-unit{grid-column:3;justify-self:start;padding-left:6px;font-size:17px;color:var(--muted);font-weight:600}
+  .ex-hint{font-size:12px;color:var(--muted);margin-top:14px}
+  .next-peek{text-align:center;font-size:12px;color:var(--muted);margin-top:12px;letter-spacing:.02em}
+  .next-peek b{color:#B9BFC6;font-weight:600}
+
+  .rest-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:0}
+  .rest-label{font-size:12px;letter-spacing:.26em;color:var(--muted);font-weight:700;margin-bottom:14px}
+  .rest-time{
+    font-size:clamp(78px,26vw,104px);line-height:1;font-weight:800;letter-spacing:-.04em;
+    color:var(--accent);font-variant-numeric:tabular-nums;text-shadow:0 0 50px rgba(200,245,66,.22);
+  }
+  .rest-time.urgent{animation:pulse .9s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  .rest-next{font-size:13.5px;color:var(--muted);margin-top:20px;max-width:280px;line-height:1.7}
+  .rest-next b{color:var(--text);font-weight:600}
+  .rest-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:8px}
+  .rest-actions .btn{height:52px;font-size:15px;font-weight:700}
+
+  .start-toast{
+    position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 74px);transform:translateX(-50%);
+    z-index:40;background:var(--accent);color:#0B0D0F;font-size:13px;font-weight:800;
+    padding:10px 18px;border-radius:999px;box-shadow:0 10px 28px rgba(0,0,0,.4);
+    animation:toastIn .2s ease;white-space:nowrap;
+  }
+  @keyframes toastIn{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
+
+  /* ---------- done ---------- */
+  .done-wrap{
+    flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;
+    padding:calc(env(safe-area-inset-top,0px) + 30px) 20px calc(env(safe-area-inset-bottom,0px) + 26px);
+    text-align:center;
+  }
+  .check-wrap{position:relative;width:120px;height:120px;margin-bottom:20px}
+  .check-circle{
+    position:absolute;inset:0;border-radius:50%;
+    background:conic-gradient(var(--accent) 0deg 360deg);
+    animation:circleFill .7s ease both;
+  }
+  .check-inner{
+    position:absolute;inset:10px;border-radius:50%;background:var(--accent);
+    display:grid;place-items:center;color:#0B0D0F;
+    box-shadow:0 0 0 12px rgba(200,245,66,.08);
+  }
+  .check-inner svg{width:54px;height:54px;stroke-dasharray:60;stroke-dashoffset:60;animation:checkDraw .4s .4s ease forwards}
+  @keyframes circleFill{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+  @keyframes checkDraw{to{stroke-dashoffset:0}}
+  .particle{
+    position:absolute;width:6px;height:6px;border-radius:50%;background:var(--accent);
+    animation:burst 1s ease-out forwards;
+  }
+  @keyframes burst{0%{transform:translate(0,0);opacity:1}100%{transform:translate(var(--px),var(--py));opacity:0}}
+
+  .done-wrap h1{font-size:34px;font-weight:800;letter-spacing:-.02em;margin:6px 0 8px}
+  .done-sub{color:var(--muted);font-size:13.5px;margin-bottom:8px}
+  .sync-msg{color:var(--accent);font-size:13px;font-weight:700;margin-bottom:28px;animation:fadeUp .4s .9s ease both}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:34px;width:100%}
+  .stats > div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 4px}
+  .stats strong{display:block;font-size:21px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+  .stats span{display:block;font-size:10.5px;color:var(--muted);margin-top:6px;letter-spacing:.04em}
+  .done-actions{width:100%}
+  .done-actions .btn{height:52px;border-radius:12px}
+  .done-actions .btn + .btn{margin-top:16px}
+  .done-actions .btn.ghost{background:transparent;border:1px solid #3A3F45;color:var(--text)}
+  .done-actions .btn.primary{box-shadow:0 10px 26px rgba(200,245,66,.16)}
+
+  /* ---------- calendar ---------- */
+  .cal-head{display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 16px) 20px 12px}
+  .cal-head .month{font-size:20px;font-weight:800}
+  .cal-head .nav{display:flex;gap:8px}
+  .cal-nav{width:36px;height:36px;border-radius:10px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;color:var(--text)}
+  .cal-grid{padding:0 20px}
+  .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px}
+  .cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .cal-day{
+    aspect-ratio:1/1;border-radius:10px;background:var(--card);border:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:600;
+    color:var(--text);position:relative;
+  }
+  .cal-day.other{opacity:.35}
+  .cal-day.today{box-shadow:0 0 0 2px var(--accent) inset}
+  .cal-day .d{font-variant-numeric:tabular-nums}
+  .cal-day:hover{transform:scale(1.03)}
+  .cal-day:active{transform:scale(.97)}
+  .cal-legend{display:flex;align-items:center;gap:10px;padding:14px 20px 4px;flex-wrap:wrap}
+  .cal-legend .sw{width:14px;height:14px;border-radius:4px}
+  .cal-legend .t{font-size:11px;color:var(--muted)}
+
+  .cal-stats{margin:12px 20px 0;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .cal-stats > div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 8px;text-align:center}
+  .cal-stats strong{display:block;font-size:18px;font-weight:800;color:var(--accent)}
+  .cal-stats span{font-size:10px;color:var(--muted)}
+
+  /* ---------- modals / sheet ---------- */
+  .modal-backdrop{
+    position:fixed;inset:0;z-index:50;background:rgba(6,8,9,.74);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    display:flex;align-items:center;justify-content:center;padding:24px;
+  }
+  .modal-card{
+    width:100%;max-width:340px;background:var(--card);border:1px solid rgba(255,255,255,.09);
+    border-radius:18px;padding:22px;text-align:center;animation:pop .2s ease;max-height:80vh;overflow-y:auto;
+  }
+  @keyframes pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+  .modal-card.wide{max-width:380px;text-align:left}
+  .modal-card h3{font-size:20px;font-weight:800;margin-bottom:12px;text-align:center}
+  .modal-card p{font-size:13px;color:var(--muted);line-height:1.6}
+  .modal-card .modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+  .modal-card .modal-actions .btn{height:50px;font-size:15px;font-weight:700}
+  .modal-card .full-btn{margin-top:14px}
+
+  /* 结束训练二级页 */
+  .exit-card{padding:20px 18px 18px;max-width:360px}
+  .exit-overview{text-align:center;padding:2px 2px 18px}
+  .exit-cap{font-size:10px;font-weight:800;letter-spacing:.2em;color:var(--muted)}
+  .exit-hero{
+    font-size:54px;font-weight:800;line-height:1;letter-spacing:-.045em;
+    color:var(--accent);font-variant-numeric:tabular-nums;margin-top:14px;
+    text-shadow:0 0 40px rgba(200,245,66,.20);
+  }
+  .exit-meta{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}
+  .exit-bar{height:4px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:16px}
+  .exit-bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s ease}
+  .exit-bar-row{display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--muted)}
+  .exit-btns{border-top:1px solid var(--line);padding-top:18px}
+  .btn-pause-full{
+    width:100%;height:52px;border:none;border-radius:14px;background:var(--accent);color:#11160A;
+    font-size:16px;font-weight:800;font-family:inherit;cursor:pointer;transition:transform .12s;
+  }
+  .btn-pause-full:active{transform:scale(.985)}
+  .exit-line{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  .exit-line .btn{height:48px;font-size:14px;font-weight:700;border-radius:14px}
+
+  /* 暂停页 */
+  .pause-wrap{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:0 24px;text-align:center;
+  }
+  .pause-badge{
+    font-size:10px;font-weight:800;letter-spacing:.24em;color:var(--accent);
+    background:var(--accent-soft);padding:6px 12px;border-radius:8px;
+  }
+  .pause-title{
+    font-size:clamp(44px,13vw,58px);font-weight:800;letter-spacing:-.03em;
+    margin-top:16px;color:var(--text);
+  }
+  .pause-summary{width:100%;max-width:320px;margin-top:26px;display:flex;flex-direction:column;gap:12px}
+  .pause-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;color:var(--muted)}
+  .pause-row b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+  .pause-resume{max-width:320px;margin-top:32px;height:58px;font-size:16px}
+  .drop{
+    width:64px;height:64px;margin:0 auto 14px;border-radius:50%;background:var(--accent-soft);
+    display:grid;place-items:center;color:var(--accent);
+  }
+  .drop + h3{margin-top:0}
+
+  .field{margin-bottom:12px;text-align:left}
+  .field label{display:block;font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.05em;margin-bottom:5px}
+  .field input[type=text],.field input[type=number]{
+    width:100%;height:46px;padding:0 14px;background:var(--card-hi);border:1px solid var(--line);
+    border-radius:10px;color:var(--text);font-size:15px;
+  }
+  .field input:focus{outline:none;border-color:rgba(200,245,66,.5)}
+  .field .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .field .row3 input{height:42px;font-size:14px}
+
+  .record-list{margin:10px 0}
+  .record-item{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .record-item:last-child{border-bottom:0}
+  .record-item .lp{color:var(--muted)}
+  .record-item .rv{font-weight:700}
+  .round-block{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+  .round-title{font-size:11px;font-weight:800;letter-spacing:.14em;color:var(--accent);margin-bottom:6px}
+  .record-actions{display:flex;gap:8px;margin-top:14px}
+  .record-actions .btn{flex:1;height:46px;font-size:13px;font-weight:700}
+
+  .sheet-backdrop{position:fixed;inset:0;z-index:60;background:rgba(6,8,9,.7);display:flex;align-items:flex-end;justify-content:center}
+  .sheet{
+    width:100%;max-width:520px;background:#1A1D21;border-top:1px solid rgba(255,255,255,.09);
+    border-radius:20px 20px 0 0;padding:10px 20px calc(env(safe-area-inset-bottom,0px) + 20px);
+    animation:up .24s ease;max-height:80vh;overflow-y:auto;
+  }
+  @keyframes up{from{transform:translateY(100%)}to{transform:none}}
+  .sheet-handle{width:36px;height:4px;border-radius:2px;background:#3A4048;margin:0 auto 16px}
+  .sheet h3{font-size:18px;font-weight:800;margin-bottom:4px}
+  .sheet-sub{font-size:13px;color:var(--muted);margin-bottom:16px}
+  .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .chip{
+    width:100%;height:46px;border-radius:10px;background:var(--card-hi);
+    border:1px solid var(--line);color:var(--text);font-size:14px;font-weight:600;
+  }
+  .chip.active{background:var(--accent);color:#0B0D0F;border-color:var(--accent);font-weight:800}
+  .sheet .btn{margin-top:16px;height:52px;font-size:16px}
+
+  /* ============ 训练中：调整计划 ============ */
+  #btnReorder{width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;color:var(--text)}
+  #btnReorder svg{display:block}
+  #btnReorder:active{background:var(--card-hi);color:var(--accent)}
+  .ro-list{display:flex;flex-direction:column;gap:6px;margin:4px -4px 0;padding:0 4px}
+  .ro-item{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;
+    background:var(--card-hi);border:1px solid var(--line);
+  }
+  .ro-item.current{border-color:rgba(200,245,66,.45);background:rgba(200,245,66,.07)}
+  .ro-item.done{opacity:.45;background:#15181B}
+  .ro-handle{display:none}
+  .ro-item.done .ro-handle{display:none}
+  .ro-main{flex:1;min-width:0}
+  .ro-name{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ro-meta{font-size:11.5px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+  .ro-meta b{color:var(--text);font-weight:700}
+  .ro-item.done .ro-meta b{color:var(--muted)}
+  .ro-promote{
+    flex:0 0 auto;width:30px;height:30px;border-radius:8px;background:#1F2328;border:1px solid var(--line);
+    color:var(--text);display:grid;place-items:center;
+  }
+  .ro-promote svg{display:block}
+  .ro-promote:active{background:var(--card-hi);color:var(--accent)}
+  .ro-item.done .ro-promote{display:none}
+  .ro-item.drag{opacity:.4;transform:scale(.985)}
+  .ro-item.drop-before{box-shadow:inset 0 3px 0 var(--accent)}
+  .ro-item.drop-after{box-shadow:inset 0 -3px 0 var(--accent)}
+  .ro-overlay{box-shadow:0 10px 32px rgba(0,0,0,.45);pointer-events:none}
+  .ro-foot{padding:12px 0 4px}
+  .ro-foot .btn{margin-top:0;height:48px;font-size:15px}
+
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ 首页 ============ -->
+  <section id="screen-home" class="screen active">
+    <div class="page-head">
+      <div class="eyebrow">TODAY · <span id="dateLabel">11月11日 · 周三</span></div>
+      <h1>今天练什么</h1>
+      <p class="sub">选择部位，挑好动作，剩下的交给计时器</p>
+    </div>
+    <div class="scroll">
+      <div class="cal-entry" id="calEntry">
+        <span class="month-badge" id="calMonthBadge">11月</span>
+        <span class="cal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg></span>
+        <span class="txt"><span class="t">训练日历</span><span class="s" id="calSummary">本月已训练 1 天</span></span>
+        <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg>
+      </div>
+
+      <div class="section-head">
+        <h2>训练部位</h2>
+        <span>可多选</span>
+      </div>
+      <div class="part-grid" id="partGrid"><button class="part-card selected" data-part="chest" data-char="胸"><span class="part-top"><span class="part-name">胸</span><span class="part-flag">5</span></span><span class="part-en">CHEST</span><span class="part-count">已选 5 个动作</span></button><button class="part-card" data-part="back" data-char="背"><span class="part-top"><span class="part-name">背</span></span><span class="part-en">BACK</span><span class="part-count">共 9 个动作</span></button><button class="part-card" data-part="legs" data-char="腿"><span class="part-top"><span class="part-name">腿</span></span><span class="part-en">LEGS</span><span class="part-count">共 13 个动作</span></button><button class="part-card" data-part="shoulders" data-char="肩"><span class="part-top"><span class="part-name">肩</span></span><span class="part-en">SHOULDERS</span><span class="part-count">共 10 个动作</span></button><button class="part-card selected" data-part="arms" data-char="手臂"><span class="part-top"><span class="part-name">手臂</span><span class="part-flag">2</span></span><span class="part-en">ARMS</span><span class="part-count">已选 2 个动作</span></button><button class="part-card" data-part="core" data-char="核心"><span class="part-top"><span class="part-name">核心</span></span><span class="part-en">CORE</span><span class="part-count">共 8 个动作</span></button></div>
+
+      <div class="sel-block" id="selBlock">
+        <div class="section-head">
+          <h2>已选部位</h2>
+          <span id="selCount">2 个部位 · 7 个动作</span>
+        </div>
+        <div class="sel-parts" id="selPartsRow"><button class="sel-part" data-selpart="chest"><span class="nm">胸</span><span class="ct">5 个动作</span></button><button class="sel-part" data-selpart="arms"><span class="nm">手臂</span><span class="ct">2 个动作</span></button></div>
+        <div class="sel-actions">
+          <button class="pill-btn" id="btnSaveCombo">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+            <span class="lbls"><span class="a">保存为组合预设</span></span>
+          </button>
+          <button class="pill-btn" id="btnClearSel" style="width: 102px; height: 27px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+            <span class="lbls"><span class="a">清空</span><span class="b">确认清空</span></span>
+          </button>
+        </div>
+        <div class="sel-list" id="selList"><div class="sel-item"><span class="pn">胸</span><span class="nm">上斜杠铃卧推</span><span class="mt">4 组 × 10 次</span></div><div class="sel-item"><span class="pn">胸</span><span class="nm">上斜哑铃卧推</span><span class="mt">4 组 × 12 次</span></div><div class="sel-item"><span class="pn">胸</span><span class="nm">平板哑铃卧推</span><span class="mt">4 组 × 12 次</span></div><div class="sel-item"><span class="pn">胸</span><span class="nm">俯卧撑</span><span class="mt">3 组 × 12 次</span></div><div class="sel-item"><span class="pn">胸</span><span class="nm">下斜杠铃卧推</span><span class="mt">4 组 × 10 次</span></div><div class="sel-item"><span class="pn">手臂</span><span class="nm">哑铃交替弯举</span><span class="mt">3 组 × 12 次</span></div><div class="sel-item"><span class="pn">手臂</span><span class="nm">过顶绳索臂屈伸</span><span class="mt">3 组 × 12 次</span></div></div>
+      </div>
+
+      <div class="combo-block" id="comboBlock">
+        <div class="section-head">
+          <h2>组合预设</h2>
+          <span>点击套用</span>
+        </div>
+        <div class="combo-row" id="comboRow"><div class="combo-card"><button class="combo-main" data-combo="kmwabrmw15lb"><span class="cn">胸+二头</span><span class="cs">胸+手臂 · 7 个动作</span></button><button class="combo-more" data-combo-menu="kmwabrmw15lb" aria-label="更多操作">···</button></div><div class="combo-card"><button class="combo-main" data-combo="kmwabwu3w3mr"><span class="cn">背+三头</span><span class="cs">背+手臂 · 6 个动作</span></button><button class="combo-more" data-combo-menu="kmwabwu3w3mr" aria-label="更多操作">···</button></div><div class="combo-card"><button class="combo-main" data-combo="kmwabyrf97ep"><span class="cn">肩+核心</span><span class="cs">肩+核心 · 7 个动作</span></button><button class="combo-more" data-combo-menu="kmwabyrf97ep" aria-label="更多操作">···</button></div></div>
+      </div>
+
+      <div class="hint">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>
+        <span>配置与日历只保存在<b>本机浏览器</b>，无需账号。</span>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <div class="bar-info">
+        <span id="homeSummary">7 个动作 · 2 个部位 · 25 组</span>
+        <strong id="homeEstimate">约 73 分钟</strong>
+      </div>
+      <button class="btn primary" id="btnStart">开始训练</button>
+    </div>
+  </section>
+
+  <!-- ============ 动作库 ============ -->
+  <section id="screen-lib" class="screen">
+    <div class="lib-head">
+      <button class="icon-btn" id="btnLibBack" aria-label="返回">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+      </button>
+      <div class="titles">
+        <div class="eyebrow" id="libEn">BACK · 动作库</div>
+        <h2 id="libTitle">背</h2>
+        <div class="lib-sub" id="libCount">已选 4 个动作</div>
+      </div>
+      <button class="pill-btn" id="btnClearPart">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        <span class="lbls"><span class="a">清空</span></span>
+      </button>
+    </div>
+    <div class="scroll">
+      <button class="add-custom" id="btnAddCustom">
+        <span class="plus">+</span><span>新建我的动作</span>
+      </button>
+
+      <div id="myExContainer"></div>
+
+      <div class="presets-block" id="presetsBlock">
+        <div class="presets-head"><h3>动作预设</h3><button id="btnSavePreset">保存动作预设</button></div>
+        <div class="preset-row" id="presetRow"><span style="font-size:12px;color:var(--muted)">还没有动作预设，选好动作后可保存</span></div>
+      </div>
+
+      <div id="subgroupContainer"><div class="subgroup"><div class="subgroup-head"><span class="bar"></span><span>背阔肌</span></div><div class="ex-card" data-ex="pullup"><div class="ex-top"><div class="ex-head"><span class="ex-name">引体向上</span><span class="check"></span></div><span class="ex-meta">4 组 × 8 次 · 休息 90s</span></div><div class="params"><div class="param"><div class="k">组数</div><div class="v"><button class="pbtn" data-act="sets-" aria-label="减少组数">-</button><span class="n">4</span><button class="pbtn" data-act="sets+" aria-label="增加组数">+</button></div></div><div class="param"><div class="k">次数</div><div class="v"><button class="pbtn" data-act="rep-" aria-label="减少次数">-</button><span class="n">8</span><button class="pbtn" data-act="rep+" aria-label="增加次数">+</button></div></div><div class="param"><div class="k">休息</div><div class="v"><button class="pbtn" data-act="rest-" aria-label="减少休息">-</button><span class="n">90</span><button class="pbtn" data-act="rest+" aria-label="增加休息">+</button></div></div></div></div><div class="ex-card selected" data-ex="lat-pulldown"><div class="ex-top"><div class="ex-head"><span class="ex-name">高位下拉</span><span class="check"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></span></div><span class="ex-meta">4 组 × 12 次 · 休息 60s</span></div><div class="params"><div class="param"><div class="k">组数</div><div class="v"><button class="pbtn" data-act="sets-" aria-label="减少组数">-</button><span class="n">4</span><button class="pbtn" data-act="sets+" aria-label="增加组数">+</button></div></div><div class="param"><div class="k">次数</div><div class="v"><button class="pbtn" data-act="rep-" aria-label="减少次数">-</button><span class="n">12</span><button class="pbtn" data-act="rep+" aria-label="增加次数">+</button></div></div><div class="param"><div class="k">休息</div><div class="v"><button class="pbtn" data-act="rest-" aria-label="减少休息">-</button><span class="n">60</span><button class="pbtn" data-act="rest+" aria-label="增加休息">+</button></div></div></div></div><div class="ex-card selected" data-ex="seated-row"><div class="ex-top"><div class="ex-head"><span class="ex-name">坐姿绳索划船</span><span class="check"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></span></div><span class="ex-meta">3 组 × 12 次 · 休息 60s</span></div><div class="params"><div class="param"><div class="k">组数</div><div class="v"><button class="pbtn" data-act="sets-" aria-label="减少组数">-</button><span class="n">3</span><button class="pbtn" data-act="sets+" aria-label="增加组数">+</button></div></div><div class="param"><div class="k">次数</div><div class="v"><button class="pbtn" data-act="rep-" aria-label="减少次数">-</button><span class="n">12</span><button class="pbtn" data-act="rep+" aria-label="增加次数">+</button></div></div><div class="param"><div class="k">休息</div><div class="v"><button class="pbtn" data-act="rest-" aria-label="减少休息">-</button><span class="n">60</span><button class="pbtn" data-act="rest+" aria-label="增加休息">+</button></div></div></div></div><div class="ex-card selected" data-ex="bb-row"><div class="ex-top"><div class="ex-head"><span class="ex-name">俯身杠铃划船</span><span class="check"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></span></div><span class="ex-meta">4 组 × 10 次 · 休息 90s</span></div><div class="params"><div class="param"><div class="k">组数</div><div class="v"><button class="pbtn" data-act="sets-" aria-label="减少组数">-</button><span class="n">4</span><button class="pbtn" data-act="sets+" aria-label="增加组数">+</button></div></div><div class="param"><div class="k">次数</div><div class="v"><button class="pbtn" data-act="rep-" aria-label="减少次数">-</button><span class="n">10</span><button class="pbtn" data-act="rep+" aria-label="增加次数">+</button></div></div><div class="param"><div class="k">休息</div><div class="v"><button class="pbtn" data-act="rest-" aria-label="减少休息">-</button><span class="n">90</span><button class="pbtn" data-act="rest+" aria-label="增加休息">+</button></div></div></div></div><div class="ex-card" data-ex="single-db-row"><div class="ex-top"><div class="ex-head"><span class="ex-name">单臂哑铃划船</span><span class="check"></span></div><span class="ex-meta">3 组 × 12 次 · 休息 60s</span></div><div class="params"><div class="param"><div class="k">组数</div><div class="v"><button class="pbtn" data-act="sets-" aria-label="减少组数">-</button><span class="n">3</span><button class="pbtn" data-act="sets+" aria-label="增加组数">+</button></div></div><div class="param"><div class="k">次数</div><div class="v"><button class="pbtn" data-act="rep-" aria-label="减少次数">-</button><span class="n">12</span><button class="pbtn" data-act="rep+" aria-label="增加次数">+</button></div></div><div class="param"><div class="k">休息</div><div class="v"><button class="pbtn" data-act="rest-" aria-label="减少休息">-</button><span class="n">60</span><button class="pbtn" data-act="rest+" aria-label="增加休息">+</button></div></div></div></div></div><div class="subgroup"><div class="subgroup-head"><span class="bar"></span><span>斜方肌</span></div><div class="ex-card" data-ex="shrug-bb"><div class="ex-top"><div class="ex-head"><span class="ex-name">杠铃耸肩</span><span class="check"></span></div><span class="ex-meta">4 组 × 12 次 · 休息 60s</span></div><div class="params"><div class="param"><div class="k">组数</div><div class="v"><button class="pbtn" data-act="sets-" aria-label="减少组数">-</button><span class="n">4</span><button class="pbtn" data-act="sets+" aria-label="增加组数">+</button></div></div><div class="param"><div class="k">次数</div><div class="v"><button class="pbtn" data-act="rep-" aria-label="减少次数">-</button><span class="n">12</span><button class="pbtn" data-act="rep+" aria-label="增加次数">+</button></div></div><div class="param"><div class="k">休息</div><div class="v"><button class="pbtn" data-act="rest-" aria-label="减少休息">-</button><span class="n">60</span><button class="pbtn" data-act="rest+" aria-label="增加休息">+</button></div></div></div></div><div class="ex-card" data-ex="shrug-db"><div class="ex-top"><div class="ex-head"><span class="ex-name">哑铃耸肩</span><span class="check"></span></div><span class="ex-meta">4 组 × 12 次 · 休息 60s</span></div><div class="params"><div class="param"><div class="k">组数</div><div class="v"><button class="pbtn" data-act="sets-" aria-label="减少组数">-</button><span class="n">4</span><button class="pbtn" data-act="sets+" aria-label="增加组数">+</button></div></div><div class="param"><div class="k">次数</div><div class="v"><button class="pbtn" data-act="rep-" aria-label="减少次数">-</button><span class="n">12</span><button class="pbtn" data-act="rep+" aria-label="增加次数">+</button></div></div><div class="param"><div class="k">休息</div><div class="v"><button class="pbtn" data-act="rest-" aria-label="减少休息">-</button><span class="n">60</span><button class="pbtn" data-act="rest+" aria-label="增加休息">+</button></div></div></div></div></div><div class="subgroup"><div class="subgroup-head"><span class="bar"></span><span>竖脊肌</span></div><div class="ex-card selected" data-ex="deadlift"><div class="ex-top"><div class="ex-head"><span class="ex-name">屈腿硬拉</span><span class="check"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></span></div><span class="ex-meta">4 组 × 6 次 · 休息 90s</span></div><div class="params"><div class="param"><div class="k">组数</div><div class="v"><button class="pbtn" data-act="sets-" aria-label="减少组数">-</button><span class="n">4</span><button class="pbtn" data-act="sets+" aria-label="增加组数">+</button></div></div><div class="param"><div class="k">次数</div><div class="v"><button class="pbtn" data-act="rep-" aria-label="减少次数">-</button><span class="n">6</span><button class="pbtn" data-act="rep+" aria-label="增加次数">+</button></div></div><div class="param"><div class="k">休息</div><div class="v"><button class="pbtn" data-act="rest-" aria-label="减少休息">-</button><span class="n">90</span><button class="pbtn" data-act="rest+" aria-label="增加休息">+</button></div></div></div></div><div class="ex-card" data-ex="hyperext"><div class="ex-top"><div class="ex-head"><span class="ex-name">山羊挺身</span><span class="check"></span></div><span class="ex-meta">3 组 × 12 次 · 休息 60s</span></div><div class="params"><div class="param"><div class="k">组数</div><div class="v"><button class="pbtn" data-act="sets-" aria-label="减少组数">-</button><span class="n">3</span><button class="pbtn" data-act="sets+" aria-label="增加组数">+</button></div></div><div class="param"><div class="k">次数</div><div class="v"><button class="pbtn" data-act="rep-" aria-label="减少次数">-</button><span class="n">12</span><button class="pbtn" data-act="rep+" aria-label="增加次数">+</button></div></div><div class="param"><div class="k">休息</div><div class="v"><button class="pbtn" data-act="rest-" aria-label="减少休息">-</button><span class="n">60</span><button class="pbtn" data-act="rest+" aria-label="增加休息">+</button></div></div></div></div></div></div>
+    </div>
+    <div class="bottom-bar">
+      <div class="bar-info">
+        <span id="libSummary">本部位已选 4 个动作</span>
+        <strong id="libEstimate">约 47 分钟</strong>
+      </div>
+      <button class="btn primary" id="btnLibDone">完成</button>
+    </div>
+  </section>
+
+  <!-- ============ 训练安排 ============ -->
+  <section id="screen-plan" class="screen">
+    <div class="lib-head">
+      <button class="icon-btn" id="btnPlanBack" aria-label="返回">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+      </button>
+      <div class="titles"><div class="eyebrow">PLAN</div><h2>训练安排</h2></div>
+    </div>
+    <div class="scroll plan-scroll">
+      <div class="plan-hero">
+        <p class="k">推荐训练时长</p>
+        <div class="big-time"><span id="recMin">73</span><small>分钟</small></div>
+        <p class="plan-sub" id="planCounts">7 个动作 · 25 组</p>
+        <p class="plan-sub" style="color:#666D76;font-size:11.5px">含热身 10 分钟、拉伸 5 分钟与换器械时间</p>
+      </div>
+
+      <div class="card target-card">
+        <div class="target-row">
+          <span class="k">目标时长</span>
+          <span class="target-value" id="targetLabel">75 分钟</span>
+        </div>
+        <input type="range" id="targetRange" min="20" max="180" step="5" value="75" aria-label="目标训练时长" style="--fill: 34.375%;">
+        <div class="scale"><span>20 分钟</span><span>100</span><span>180 分钟</span></div>
+        <div class="presets" id="targetPresets">
+          <button class="preset" data-min="45">45</button>
+          <button class="preset" data-min="60">60</button>
+          <button class="preset" data-min="75">75</button>
+          <button class="preset active" data-min="0">推荐</button>
+        </div>
+        <span class="slider-tip">调小会优先压缩组间休息，再减组数（每个动作保底 2 组）</span>
+      </div>
+
+      <div id="compareWrap"><div class="note-card"><span class="dot"></span><span>目标时长不低于推荐，按原计划进行。</span></div></div>
+
+      <div class="plan-list">
+        <div class="plan-card">
+          <div class="plan-card-head">
+            <span class="plan-card-title">完整清单</span>
+            <span class="plan-card-count" id="planListCount">7 个动作</span>
+          </div>
+          <div id="planList"><div class="plan-item" data-item-id="incline-db"><span class="pt">胸</span><div class="pi-main"><div class="pi-top"><span class="nm">上斜哑铃卧推</span><span class="meta">4 组 × 12 次 · 休 90s</span></div></div><span class="big-num">1</span><button class="plan-grip" aria-label="拖动排序"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="3" r="1.2"></circle><circle cx="4" cy="8" r="1.2"></circle><circle cx="4" cy="13" r="1.2"></circle><circle cx="11" cy="3" r="1.2"></circle><circle cx="11" cy="8" r="1.2"></circle><circle cx="11" cy="13" r="1.2"></circle></svg></button></div><div class="plan-item" data-item-id="decline-bb"><span class="pt">胸</span><div class="pi-main"><div class="pi-top"><span class="nm">下斜杠铃卧推</span><span class="meta">4 组 × 10 次 · 休 90s</span></div></div><span class="big-num">2</span><button class="plan-grip" aria-label="拖动排序"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="3" r="1.2"></circle><circle cx="4" cy="8" r="1.2"></circle><circle cx="4" cy="13" r="1.2"></circle><circle cx="11" cy="3" r="1.2"></circle><circle cx="11" cy="8" r="1.2"></circle><circle cx="11" cy="13" r="1.2"></circle></svg></button></div><div class="plan-item" data-item-id="pushup"><span class="pt">胸</span><div class="pi-main"><div class="pi-top"><span class="nm">俯卧撑</span><span class="meta">3 组 × 12 次 · 休 60s</span></div></div><span class="big-num">3</span><button class="plan-grip" aria-label="拖动排序"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="3" r="1.2"></circle><circle cx="4" cy="8" r="1.2"></circle><circle cx="4" cy="13" r="1.2"></circle><circle cx="11" cy="3" r="1.2"></circle><circle cx="11" cy="8" r="1.2"></circle><circle cx="11" cy="13" r="1.2"></circle></svg></button></div><div class="plan-item" data-item-id="flat-db"><span class="pt">胸</span><div class="pi-main"><div class="pi-top"><span class="nm">平板哑铃卧推</span><span class="meta">4 组 × 12 次 · 休 90s</span></div></div><span class="big-num">4</span><button class="plan-grip" aria-label="拖动排序"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="3" r="1.2"></circle><circle cx="4" cy="8" r="1.2"></circle><circle cx="4" cy="13" r="1.2"></circle><circle cx="11" cy="3" r="1.2"></circle><circle cx="11" cy="8" r="1.2"></circle><circle cx="11" cy="13" r="1.2"></circle></svg></button></div><div class="plan-item" data-item-id="incline-bb"><span class="pt">胸</span><div class="pi-main"><div class="pi-top"><span class="nm">上斜杠铃卧推</span><span class="meta">4 组 × 10 次 · 休 90s</span></div></div><span class="big-num">5</span><button class="plan-grip" aria-label="拖动排序"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="3" r="1.2"></circle><circle cx="4" cy="8" r="1.2"></circle><circle cx="4" cy="13" r="1.2"></circle><circle cx="11" cy="3" r="1.2"></circle><circle cx="11" cy="8" r="1.2"></circle><circle cx="11" cy="13" r="1.2"></circle></svg></button></div><div class="plan-item" data-item-id="oh-cable"><span class="pt">手臂</span><div class="pi-main"><div class="pi-top"><span class="nm">过顶绳索臂屈伸</span><span class="meta">3 组 × 12 次 · 休 60s</span></div></div><span class="big-num">6</span><button class="plan-grip" aria-label="拖动排序"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="3" r="1.2"></circle><circle cx="4" cy="8" r="1.2"></circle><circle cx="4" cy="13" r="1.2"></circle><circle cx="11" cy="3" r="1.2"></circle><circle cx="11" cy="8" r="1.2"></circle><circle cx="11" cy="13" r="1.2"></circle></svg></button></div><div class="plan-item" data-item-id="alt-db-curl"><span class="pt">手臂</span><div class="pi-main"><div class="pi-top"><span class="nm">哑铃交替弯举</span><span class="meta">3 组 × 12 次 · 休 60s</span></div></div><span class="big-num">7</span><button class="plan-grip" aria-label="拖动排序"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="3" r="1.2"></circle><circle cx="4" cy="8" r="1.2"></circle><circle cx="4" cy="13" r="1.2"></circle><circle cx="11" cy="3" r="1.2"></circle><circle cx="11" cy="8" r="1.2"></circle><circle cx="11" cy="13" r="1.2"></circle></svg></button></div></div>
+          
+        <p class="plan-hint">长按卡片可以调整顺序</p></div>
+      </div>
+
+      <button class="water-row" id="btnWaterPlan">
+        <span class="wicon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7S5.5 9.6 5.5 14a6.5 6.5 0 0 0 13 0c0-4.4-6.5-11.3-6.5-11.3z"></path></svg></span>
+        <span class="wk">喝水提醒</span>
+        <span class="wv" id="waterLabel">每 15 分钟</span>
+        <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg>
+      </button>
+    </div>
+    <div class="bottom-bar">
+      <button class="btn primary" id="btnBegin">确认，开始训练</button>
+    </div>
+  </section>
+
+  <!-- ============ 训练中 ============ -->
+  <section id="screen-train" class="screen train">
+    <div class="train-head">
+      <button class="icon-btn" id="btnExit" aria-label="结束训练" style="width:38px;height:38px;border-radius:10px">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+      <div class="progress"><i id="progressFill" style="width: 0%;"></i></div>
+      <button class="icon-btn" id="btnReorder" aria-label="调整计划">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14M5 12h14M5 18h14"></path><circle cx="3" cy="6" r="1.2" fill="currentColor"></circle><circle cx="3" cy="12" r="1.2" fill="currentColor"></circle><circle cx="3" cy="18" r="1.2" fill="currentColor"></circle></svg>
+      </button>
+      <button class="water-btn" id="btnWater">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7S5.5 9.6 5.5 14a6.5 6.5 0 0 0 13 0c0-4.4-6.5-11.3-6.5-11.3z"></path></svg>
+        <span id="waterNextLabel">--:--</span>
+      </button>
+    </div>
+    <div class="train-meta">
+      <span class="tag" id="trainTag">热身</span>
+      <span class="elapsed" id="trainElapsed">00:00</span>
+    </div>
+
+    <!-- 热身内容（结构照搬 restView） -->
+    <div class="work-stage warm-stage hidden" id="warmView">
+      <div class="rest-center">
+        <p class="rest-label">热身中</p>
+        <div class="warm-big-time" id="warmBigTime">00:00</div>
+        <p class="rest-next">别急着上重量，先让身体热起来</p>
+      </div>
+      <button class="btn primary big" id="btnWarmDone">热身完成，正式开始</button>
+    </div>
+
+    <!-- 训练内容 -->
+    <div class="work-stage hidden" id="workView">
+      <div class="work-center">
+        <h2 class="ex-name" id="trainName">上斜哑铃卧推</h2>
+        <div class="bar-load" id="barLoad"><svg class="bar-svg" viewBox="0 0 240 68" role="img" aria-label="第 1 组，共 4 组"><rect x="26" y="31" width="188" height="6" rx="3" fill="#8A9099"></rect><rect class="bar-plate bar-cur" x="78.00" y="16.00" width="10.00" height="36" rx="3.5" fill="var(--accent)"></rect><rect class="bar-plate" x="65.40" y="17.50" width="10.00" height="33" rx="3.5" fill="rgba(255,255,255,.09)" stroke="rgba(255,255,255,.15)" stroke-width="1"></rect><rect class="bar-plate" x="52.80" y="19.00" width="10.00" height="30" rx="3.5" fill="rgba(255,255,255,.09)" stroke="rgba(255,255,255,.15)" stroke-width="1"></rect><rect class="bar-plate" x="40.20" y="20.50" width="10.00" height="27" rx="3.5" fill="rgba(255,255,255,.09)" stroke="rgba(255,255,255,.15)" stroke-width="1"></rect><rect class="bar-plate bar-cur" x="152.00" y="16.00" width="10.00" height="36" rx="3.5" fill="var(--accent)"></rect><rect class="bar-plate" x="164.60" y="17.50" width="10.00" height="33" rx="3.5" fill="rgba(255,255,255,.09)" stroke="rgba(255,255,255,.15)" stroke-width="1"></rect><rect class="bar-plate" x="177.20" y="19.00" width="10.00" height="30" rx="3.5" fill="rgba(255,255,255,.09)" stroke="rgba(255,255,255,.15)" stroke-width="1"></rect><rect class="bar-plate" x="189.80" y="20.50" width="10.00" height="27" rx="3.5" fill="rgba(255,255,255,.09)" stroke="rgba(255,255,255,.15)" stroke-width="1"></rect></svg><p class="bar-cap">第 <b>1</b> / 4 组</p></div>
+        <div class="rep-block">
+          <span class="rep-num" id="trainReps">12</span>
+          <span class="rep-unit" id="trainUnit">次</span>
+        </div>
+        <p class="ex-hint" id="trainHint">完成这组后自动开始休息</p>
+      </div>
+      <button class="btn primary big" id="btnDoneSet">完成</button>
+      <p class="next-peek" id="nextPeek">下一组：<b>12 次</b> · 休息 80s</p>
+    </div>
+
+    <div class="rest-stage hidden" id="restView">
+      <div class="rest-center">
+        <p class="rest-label" id="restLabel">休息</p>
+        <div class="rest-time" id="restTime">01:00</div>
+        <p class="rest-next" id="restNext">下一组<br><b>过顶绳索臂屈伸</b> · 第 2/3 组</p>
+      </div>
+      <div class="rest-actions">
+        <button class="btn ghost" id="btnAdd15">+15 秒</button>
+        <button class="btn ghost" id="btnSkipRest">跳过休息</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 暂停 ============ -->
+  <section id="screen-paused" class="screen">
+    <div class="pause-wrap">
+      <span class="pause-badge">PAUSED</span>
+      <h1 class="pause-title">已暂停</h1>
+      <div class="pause-summary" id="pauseSummary"></div>
+      <button class="btn primary pause-resume" id="btnResume">继续训练</button>
+    </div>
+  </section>
+
+  <!-- ============ 完成 ============ -->
+  <section id="screen-done" class="screen">
+    <div class="done-wrap">
+      <div class="check-wrap" id="checkWrap">
+        <div class="check-circle"></div>
+        <div class="check-inner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></div>
+      </div>
+      <h1>训练完成</h1>
+      <p class="done-sub">今天的每一组，都算数</p>
+      <p class="sync-msg">已同步到日历</p>
+      <div class="stats">
+        <div><strong id="doneTime">00:00</strong><span>训练时长</span></div>
+        <div><strong id="doneSets">0</strong><span>完成组数</span></div>
+        <div><strong id="doneEx">0</strong><span>动作</span></div>
+      </div>
+      <div class="done-actions">
+        <button class="btn primary" id="btnAgain">继续加练</button>
+        <button class="btn ghost" id="btnDoneHome">返回首页</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 训练日历 ============ -->
+  <section id="screen-cal" class="screen">
+    <div class="cal-head">
+      <button class="icon-btn" id="btnCalBack" aria-label="返回">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+      </button>
+      <div class="month" id="calMonthTitle">2026年11月</div>
+      <div class="nav">
+        <button class="cal-nav" id="btnCalPrev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></button>
+        <button class="cal-nav" id="btnCalNext"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></button>
+      </div>
+    </div>
+    <div class="cal-stats" id="calStats"><div><strong>1</strong><span>训练天数</span></div><div><strong>0</strong><span>总分钟</span></div><div><strong>2</strong><span>总组数</span></div></div>
+    <div class="cal-grid">
+      <div class="cal-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+      <div class="cal-days" id="calDays"><div class="cal-day" data-date="2026-11-01"><span class="d">1</span></div><div class="cal-day" data-date="2026-11-02"><span class="d">2</span></div><div class="cal-day" data-date="2026-11-03"><span class="d">3</span></div><div class="cal-day" data-date="2026-11-04"><span class="d">4</span></div><div class="cal-day" data-date="2026-11-05"><span class="d">5</span></div><div class="cal-day" data-date="2026-11-06"><span class="d">6</span></div><div class="cal-day" data-date="2026-11-07"><span class="d">7</span></div><div class="cal-day" data-date="2026-11-08"><span class="d">8</span></div><div class="cal-day" data-date="2026-11-09"><span class="d">9</span></div><div class="cal-day today" style="background:hsl(74, 88%, 81.0%);color:#0B0D0F;border-color:transparent" data-date="2026-11-10"><span class="d">10</span></div><div class="cal-day" data-date="2026-11-11"><span class="d">11</span></div><div class="cal-day" data-date="2026-11-12"><span class="d">12</span></div><div class="cal-day" data-date="2026-11-13"><span class="d">13</span></div><div class="cal-day" data-date="2026-11-14"><span class="d">14</span></div><div class="cal-day" data-date="2026-11-15"><span class="d">15</span></div><div class="cal-day" data-date="2026-11-16"><span class="d">16</span></div><div class="cal-day" data-date="2026-11-17"><span class="d">17</span></div><div class="cal-day" data-date="2026-11-18"><span class="d">18</span></div><div class="cal-day" data-date="2026-11-19"><span class="d">19</span></div><div class="cal-day" data-date="2026-11-20"><span class="d">20</span></div><div class="cal-day" data-date="2026-11-21"><span class="d">21</span></div><div class="cal-day" data-date="2026-11-22"><span class="d">22</span></div><div class="cal-day" data-date="2026-11-23"><span class="d">23</span></div><div class="cal-day" data-date="2026-11-24"><span class="d">24</span></div><div class="cal-day" data-date="2026-11-25"><span class="d">25</span></div><div class="cal-day" data-date="2026-11-26"><span class="d">26</span></div><div class="cal-day" data-date="2026-11-27"><span class="d">27</span></div><div class="cal-day" data-date="2026-11-28"><span class="d">28</span></div><div class="cal-day" data-date="2026-11-29"><span class="d">29</span></div><div class="cal-day" data-date="2026-11-30"><span class="d">30</span></div><div class="cal-day other"><span class="d">1</span></div><div class="cal-day other"><span class="d">2</span></div><div class="cal-day other"><span class="d">3</span></div><div class="cal-day other"><span class="d">4</span></div><div class="cal-day other"><span class="d">5</span></div></div>
+      <div class="cal-legend">
+        <span class="sw" style="background:var(--card)"></span><span class="t">未训练</span>
+        <span class="sw" style="background:hsl(74,88%,82%)"></span><span class="t">轻松</span>
+        <span class="sw" style="background:hsl(74,88%,60%)"></span><span class="t">常规</span>
+        <span class="sw" style="background:hsl(74,88%,42%)"></span><span class="t">高强度</span>
+      </div>
+    </div>
+    <div class="scroll" style="padding-top:14px"><div class="hint" style="margin-top:0">点击任意日期可查看或补录训练记录。所有数据仅保存在本机。</div></div>
+  </section>
+
+  <!-- 组间开始提示 -->
+  <div class="start-toast hidden" id="startToast">开始 · 过顶绳索臂屈伸</div>
+
+  <!-- 喝水提醒弹窗 -->
+  <div class="modal-backdrop hidden" id="waterModal">
+    <div class="modal-card">
+      <div class="drop"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7S5.5 9.6 5.5 14a6.5 6.5 0 0 0 13 0c0-4.4-6.5-11.3-6.5-11.3z"></path></svg></div>
+      <h3>该喝水了</h3>
+      <p id="waterModalSub">已训练 15 分钟</p>
+      <p class="water-tip">小口补水 200–300ml，别一次灌太多</p>
+      <button class="btn primary full-btn" id="btnWaterOk">知道了</button>
+    </div>
+  </div>
+
+  <!-- 训练中：调整计划 -->
+  <div class="sheet-backdrop hidden" id="roSheet">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <h3>调整计划</h3>
+      <p class="sheet-sub">点右侧 ↑ 可把该动作提前一位；已完成和进行中的不可调整</p>
+      <div class="ro-list" id="roList"><div class="ro-item current" data-ro-idx="0"><div class="ro-handle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h.01M8 12h.01M8 18h.01M16 6h.01M16 12h.01M16 18h.01"></path></svg></div><div class="ro-main"><div class="ro-name">上斜哑铃卧推</div><div class="ro-meta"><b>进行中 · 第 1/4 组</b> · 4 组 × 12 次</div></div></div><div class="ro-item" data-ro-idx="1"><div class="ro-handle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h.01M8 12h.01M8 18h.01M16 6h.01M16 12h.01M16 18h.01"></path></svg></div><div class="ro-main"><div class="ro-name">平板杠铃卧推</div><div class="ro-meta"><b>待开始</b> · 4 组 × 10 次</div></div></div><div class="ro-item" data-ro-idx="2"><div class="ro-handle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h.01M8 12h.01M8 18h.01M16 6h.01M16 12h.01M16 18h.01"></path></svg></div><div class="ro-main"><div class="ro-name">平板哑铃卧推</div><div class="ro-meta"><b>待开始</b> · 4 组 × 12 次</div></div><button class="ro-promote" data-promote="2" aria-label="提到下一位"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="M6 11l6-6 6 6"></path></svg></button></div><div class="ro-item" data-ro-idx="3"><div class="ro-handle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h.01M8 12h.01M8 18h.01M16 6h.01M16 12h.01M16 18h.01"></path></svg></div><div class="ro-main"><div class="ro-name">下斜杠铃卧推</div><div class="ro-meta"><b>待开始</b> · 4 组 × 10 次</div></div><button class="ro-promote" data-promote="3" aria-label="提到下一位"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="M6 11l6-6 6 6"></path></svg></button></div><div class="ro-item" data-ro-idx="4"><div class="ro-handle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h.01M8 12h.01M8 18h.01M16 6h.01M16 12h.01M16 18h.01"></path></svg></div><div class="ro-main"><div class="ro-name">俯卧撑</div><div class="ro-meta"><b>待开始</b> · 3 组 × 12 次</div></div><button class="ro-promote" data-promote="4" aria-label="提到下一位"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="M6 11l6-6 6 6"></path></svg></button></div><div class="ro-item" data-ro-idx="5"><div class="ro-handle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h.01M8 12h.01M8 18h.01M16 6h.01M16 12h.01M16 18h.01"></path></svg></div><div class="ro-main"><div class="ro-name">上斜杠铃卧推</div><div class="ro-meta"><b>待开始</b> · 4 组 × 10 次</div></div><button class="ro-promote" data-promote="5" aria-label="提到下一位"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="M6 11l6-6 6 6"></path></svg></button></div><div class="ro-item" data-ro-idx="6"><div class="ro-handle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h.01M8 12h.01M8 18h.01M16 6h.01M16 12h.01M16 18h.01"></path></svg></div><div class="ro-main"><div class="ro-name">过顶绳索臂屈伸</div><div class="ro-meta"><b>待开始</b> · 3 组 × 12 次</div></div><button class="ro-promote" data-promote="6" aria-label="提到下一位"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="M6 11l6-6 6 6"></path></svg></button></div><div class="ro-item" data-ro-idx="7"><div class="ro-handle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h.01M8 12h.01M8 18h.01M16 6h.01M16 12h.01M16 18h.01"></path></svg></div><div class="ro-main"><div class="ro-name">哑铃交替弯举</div><div class="ro-meta"><b>待开始</b> · 3 组 × 12 次</div></div><button class="ro-promote" data-promote="7" aria-label="提到下一位"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="M6 11l6-6 6 6"></path></svg></button></div></div>
+      <div class="ro-foot"><button class="btn primary" id="btnRoDone">完成</button></div>
+    </div>
+  </div>
+
+  <!-- 结束训练确认 -->
+  <div class="modal-backdrop hidden" id="exitModal">
+    <div class="modal-card exit-card">
+      <div class="exit-overview">
+        <span class="exit-cap">训练中</span>
+        <div class="exit-hero" id="pauseClock">00:00</div>
+        <div class="exit-meta" id="exitHeadMeta"></div>
+        <div class="exit-bar"><i id="exitProgressFill" style="width:0%"></i></div>
+        <div class="exit-bar-row"><span>总进度</span><span id="exitProgressPct">0%</span></div>
+      </div>
+      <div class="exit-btns">
+        <button class="btn-pause-full" id="btnExitCancel">继续训练</button>
+        <div class="exit-line">
+          <button class="btn ghost" id="btnPause">暂停训练</button>
+          <button class="btn danger" id="btnExitConfirm">结束训练</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 喝水间隔设置 -->
+  <div class="sheet-backdrop hidden" id="waterSheet">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <h3>喝水提醒</h3>
+      <p class="sheet-sub">训练中每隔一段时间弹出补水提示</p>
+      <div class="chips" id="waterChips"><button class="chip" data-water="10">每 10 分钟</button><button class="chip active" data-water="15">每 15 分钟</button><button class="chip" data-water="20">每 20 分钟</button><button class="chip" data-water="30">每 30 分钟</button><button class="chip" data-water="0">关闭</button></div>
+      <button class="btn primary" id="btnWaterSheetDone">完成</button>
+    </div>
+  </div>
+
+  <!-- 新建/编辑动作 -->
+  <div class="modal-backdrop hidden" id="customModal">
+    <div class="modal-card wide">
+      <h3 id="customModalTitle">新建我的动作</h3>
+      <div class="field">
+        <label>动作名称</label>
+        <input type="text" id="customName" placeholder="例如：哑铃推胸">
+      </div>
+      <div class="field">
+        <label>默认参数（选填）</label>
+        <div class="row3">
+          <input type="number" id="customSets" placeholder="组数" min="1" max="20">
+          <input type="number" id="customReps" placeholder="次数" min="1" max="100">
+          <input type="number" id="customRest" placeholder="休息秒" min="15" max="600">
+        </div>
+      </div>
+      <button class="btn primary full-btn" id="btnCustomSave"><span id="customSaveLabel">保存动作</span></button>
+      <button class="btn ghost full-btn" id="btnCustomCancel" style="margin-top:8px;background:transparent;border:0;color:var(--muted)">取消</button>
+    </div>
+  </div>
+
+  <!-- 我的动作菜单（重命名/编辑/删除） -->
+  <div class="modal-backdrop hidden" id="customMenu">
+    <div class="modal-card">
+      <h3 id="cmName">老奶奶后太手</h3>
+      <button class="btn ghost full-btn" id="btnRenameCustom">重命名</button>
+      <button class="btn ghost full-btn" style="margin-top:10px" id="btnEditCustom">编辑参数</button>
+      <button class="btn ghost full-btn" style="margin-top:10px" id="btnDeleteCustom">删除动作</button>
+      <button class="btn ghost full-btn" style="margin-top:10px;background:transparent;border:0;color:var(--muted)" id="btnCustomMenuCancel">取消</button>
+    </div>
+  </div>
+
+  <!-- 重命名我的动作 -->
+  <div class="modal-backdrop hidden" id="customNameModal">
+    <div class="modal-card wide">
+      <h3>重命名我的动作</h3>
+      <div class="field">
+        <label>动作名称</label>
+        <input type="text" id="customNewName" placeholder="例如：哑铃推胸">
+      </div>
+      <button class="btn primary full-btn" id="btnCustomNameSave">保存</button>
+      <button class="btn ghost full-btn" id="btnCustomNameCancel" style="margin-top:8px;background:transparent;border:0;color:var(--muted)">取消</button>
+    </div>
+  </div>
+
+  <!-- 保存预设 -->
+  <div class="modal-backdrop hidden" id="presetModal">
+    <div class="modal-card wide">
+      <h3 id="presetModalTitle">保存动作预设</h3>
+      <div class="field">
+        <label>动作预设名称</label>
+        <input type="text" id="presetName" placeholder="例如：背-经典4动作">
+      </div>
+      <button class="btn primary full-btn" id="btnPresetSave">保存</button>
+      <button class="btn ghost full-btn" id="btnPresetCancel" style="margin-top:8px;background:transparent;border:0;color:var(--muted)">取消</button>
+    </div>
+  </div>
+
+  <!-- 动作预设菜单（重命名/更新/删除） -->
+  <div class="modal-backdrop hidden" id="presetMenu">
+    <div class="modal-card">
+      <h3 id="pmName">动作预设</h3>
+      <button class="btn ghost full-btn" id="btnRenamePreset">重命名</button>
+      <button class="btn ghost full-btn" style="margin-top:10px" id="btnUpdatePreset">用当前动作更新</button>
+      <button class="btn ghost full-btn" style="margin-top:10px" id="btnDeletePreset">删除动作预设</button>
+      <button class="btn ghost full-btn" style="margin-top:10px;background:transparent;border:0;color:var(--muted)" id="btnPresetMenuCancel">取消</button>
+    </div>
+  </div>
+
+  <!-- 组合预设：保存 / 重命名 -->
+  <div class="modal-backdrop hidden" id="comboModal">
+    <div class="modal-card wide">
+      <h3 id="comboModalTitle">保存组合预设</h3>
+      <p class="sheet-sub" id="comboModalSub"></p>
+      <div class="field">
+        <label>组合预设名称</label>
+        <input type="text" id="comboName" placeholder="背+手臂">
+      </div>
+      <button class="btn primary full-btn" id="btnComboSave">保存</button>
+      <button class="btn ghost full-btn" id="btnComboCancel" style="margin-top:8px;background:transparent;border:0;color:var(--muted)">取消</button>
+    </div>
+  </div>
+
+  <!-- 组合预设菜单 -->
+  <div class="modal-backdrop hidden" id="comboMenuModal">
+    <div class="modal-card">
+      <h3 id="cmmName">背+三头</h3>
+      <button class="btn ghost full-btn" id="btnComboRename">重命名</button>
+      <button class="btn ghost full-btn" style="margin-top:10px" id="btnComboDelete">删除组合预设</button>
+      <button class="btn ghost full-btn" style="margin-top:10px;background:transparent;border:0;color:var(--muted)" id="btnComboMenuCancel">取消</button>
+    </div>
+  </div>
+
+  <!-- 日历日期详情 -->
+  <div class="modal-backdrop hidden" id="calDetailModal">
+    <div class="modal-card wide">
+      <h3 id="cdDate">11月10日</h3>
+      <div id="cdRecords"></div>
+      <button class="btn primary full-btn" id="btnAddRecord">补录训练记录</button>
+      <button class="btn ghost full-btn" style="margin-top:10px;background:transparent;border:0;color:var(--muted)" id="btnCalDetailClose">关闭</button>
+    </div>
+  </div>
+
+  <!-- 编辑/补录记录 -->
+  <div class="modal-backdrop hidden" id="recordModal">
+    <div class="modal-card wide">
+      <h3 id="recordModalTitle">补录训练</h3>
+      <div class="field">
+        <label>训练部位</label>
+        <input type="text" id="recParts" placeholder="例如：背 + 二头">
+      </div>
+      <div class="field">
+        <label>动作数</label>
+        <input type="number" id="recCount" placeholder="5" min="1" max="50">
+      </div>
+      <div class="field">
+        <label>训练时长（分钟）</label>
+        <input type="number" id="recDuration" placeholder="60" min="1" max="600">
+      </div>
+      <button class="btn primary full-btn" id="btnRecordSave">保存记录</button>
+      <button class="btn danger full-btn" id="btnRecordDelete" style="margin-top:10px;display:none">删除这条记录</button>
+      <button class="btn ghost full-btn" style="margin-top:10px;background:transparent;border:0;color:var(--muted)" id="btnRecordCancel">取消</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ================= 数据 ================= */
+  const PARTS = [
+    {id:'chest',     name:'胸',   en:'CHEST',     subs:['上胸','中胸','下胸']},
+    {id:'back',      name:'背',   en:'BACK',      subs:['背阔肌','斜方肌','竖脊肌']},
+    {id:'legs',      name:'腿',   en:'LEGS',      subs:['股四头','腘绳肌','臀','小腿']},
+    {id:'shoulders', name:'肩',   en:'SHOULDERS', subs:['前束','中束','后束']},
+    {id:'arms',      name:'手臂', en:'ARMS',      subs:['二头','三头','前臂']},
+    {id:'core',      name:'核心', en:'CORE',      subs:['上腹','下腹','侧腹','深层稳定']}
+  ];
+  const PART_BY_ID = {};
+  PARTS.forEach(p => PART_BY_ID[p.id] = p);
+
+  const CHECK_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+
+  // 动作库：rest 90=力量复合, 60=孤立
+  const EXERCISES = [
+    // 胸
+    {id:'incline-bb',   part:'chest', sub:'上胸', name:'上斜杠铃卧推', sets:4, reps:10, rest:90, compound:true},
+    {id:'incline-db',   part:'chest', sub:'上胸', name:'上斜哑铃卧推', sets:4, reps:12, rest:90, compound:true},
+    {id:'incline-fly',  part:'chest', sub:'上胸', name:'上斜哑铃飞鸟', sets:3, reps:12, rest:60},
+    {id:'low-cable',    part:'chest', sub:'上胸', name:'低位绳索夹胸', sets:3, reps:12, rest:60},
+    {id:'bench',        part:'chest', sub:'中胸', name:'平板杠铃卧推', sets:4, reps:10, rest:90, compound:true},
+    {id:'flat-db',      part:'chest', sub:'中胸', name:'平板哑铃卧推', sets:4, reps:12, rest:90, compound:true},
+    {id:'machine-fly',  part:'chest', sub:'中胸', name:'坐姿夹胸器夹胸', sets:3, reps:12, rest:60},
+    {id:'flat-fly',     part:'chest', sub:'中胸', name:'平板哑铃飞鸟', sets:3, reps:12, rest:60},
+    {id:'pushup',       part:'chest', sub:'中胸', name:'俯卧撑', sets:3, reps:12, rest:60},
+    {id:'dip',          part:'chest', sub:'下胸', name:'双杠臂屈伸', sets:3, reps:12, rest:90, compound:true},
+    {id:'decline-bb',   part:'chest', sub:'下胸', name:'下斜杠铃卧推', sets:4, reps:10, rest:90, compound:true},
+    {id:'high-cable',   part:'chest', sub:'下胸', name:'高位绳索夹胸', sets:3, reps:12, rest:60},
+    // 背
+    {id:'pullup',       part:'back', sub:'背阔肌', name:'引体向上', sets:4, reps:8,  rest:90, compound:true},
+    {id:'lat-pulldown', part:'back', sub:'背阔肌', name:'高位下拉', sets:4, reps:12, rest:60},
+    {id:'seated-row',   part:'back', sub:'背阔肌', name:'坐姿绳索划船', sets:3, reps:12, rest:60},
+    {id:'bb-row',       part:'back', sub:'背阔肌', name:'俯身杠铃划船', sets:4, reps:10, rest:90, compound:true},
+    {id:'single-db-row',part:'back', sub:'背阔肌', name:'单臂哑铃划船', sets:3, reps:12, rest:60},
+    {id:'shrug-bb',     part:'back', sub:'斜方肌', name:'杠铃耸肩', sets:4, reps:12, rest:60},
+    {id:'shrug-db',     part:'back', sub:'斜方肌', name:'哑铃耸肩', sets:4, reps:12, rest:60},
+    {id:'deadlift',     part:'back', sub:'竖脊肌', name:'屈腿硬拉', sets:4, reps:6,  rest:90, compound:true},
+    {id:'hyperext',     part:'back', sub:'竖脊肌', name:'山羊挺身', sets:3, reps:12, rest:60},
+    // 肩
+    {id:'ohp',          part:'shoulders', sub:'前束', name:'杠铃推举', sets:4, reps:8,  rest:90, compound:true},
+    {id:'front-raise',  part:'shoulders', sub:'前束', name:'哑铃前平举', sets:3, reps:12, rest:60},
+    {id:'arnold',       part:'shoulders', sub:'前束', name:'阿诺德推举', sets:4, reps:12, rest:90, compound:true},
+    {id:'lateral',      part:'shoulders', sub:'中束', name:'哑铃侧平举', sets:4, reps:12, rest:60},
+    {id:'cable-lateral',part:'shoulders', sub:'中束', name:'绳索侧平举', sets:3, reps:12, rest:60},
+    {id:'seat-lateral', part:'shoulders', sub:'中束', name:'坐姿哑铃侧平举', sets:4, reps:12, rest:60},
+    {id:'rear-fly',     part:'shoulders', sub:'后束', name:'俯身哑铃反向飞鸟', sets:3, reps:12, rest:60},
+    {id:'face-pull',    part:'shoulders', sub:'后束', name:'绳索面拉', sets:3, reps:12, rest:60},
+    {id:'rear-deck',    part:'shoulders', sub:'后束', name:'蝴蝶机反向夹胸', sets:3, reps:12, rest:60},
+    // 腿
+    {id:'squat',        part:'legs', sub:'股四头', name:'杠铃深蹲', sets:5, reps:6,  rest:90, compound:true},
+    {id:'leg-press',    part:'legs', sub:'股四头', name:'腿举', sets:4, reps:12, rest:90, compound:true},
+    {id:'leg-ext',      part:'legs', sub:'股四头', name:'坐姿腿屈伸', sets:3, reps:12, rest:60},
+    {id:'hack',         part:'legs', sub:'股四头', name:'哈克深蹲', sets:4, reps:10, rest:90, compound:true},
+    {id:'bulgarian',    part:'legs', sub:'股四头', name:'保加利亚分腿蹲', sets:3, reps:12, rest:60},
+    {id:'rdl',          part:'legs', sub:'腘绳肌', name:'罗马尼亚硬拉', sets:4, reps:10, rest:90, compound:true},
+    {id:'lying-curl',   part:'legs', sub:'腘绳肌', name:'俯卧腿弯举', sets:3, reps:12, rest:60},
+    {id:'seat-curl',    part:'legs', sub:'腘绳肌', name:'坐姿腿弯举', sets:3, reps:12, rest:60},
+    {id:'hip-thrust',   part:'legs', sub:'臀', name:'杠铃臀冲', sets:4, reps:12, rest:90, compound:true},
+    {id:'kettlebell',   part:'legs', sub:'臀', name:'壶铃摆动', sets:3, reps:12, rest:60},
+    {id:'sldl',         part:'legs', sub:'臀', name:'直腿硬拉', sets:3, reps:12, rest:90, compound:true},
+    {id:'calf-stand',   part:'legs', sub:'小腿', name:'站姿提踵', sets:4, reps:12, rest:60},
+    {id:'calf-seat',    part:'legs', sub:'小腿', name:'坐姿提踵', sets:3, reps:12, rest:60},
+    // 手臂
+    {id:'bb-curl',      part:'arms', sub:'二头', name:'杠铃弯举', sets:4, reps:10, rest:60},
+    {id:'alt-db-curl',  part:'arms', sub:'二头', name:'哑铃交替弯举', sets:3, reps:12, rest:60},
+    {id:'preacher',     part:'arms', sub:'二头', name:'斜托弯举', sets:3, reps:12, rest:60},
+    {id:'cable-curl',   part:'arms', sub:'二头', name:'绳索弯举', sets:3, reps:12, rest:60},
+    {id:'hammer',       part:'arms', sub:'二头', name:'锤式弯举', sets:3, reps:12, rest:60},
+    {id:'pushdown',     part:'arms', sub:'三头', name:'绳索下压', sets:4, reps:12, rest:60},
+    {id:'skull',        part:'arms', sub:'三头', name:'仰卧杠铃臂屈伸', sets:3, reps:10, rest:90, compound:true},
+    {id:'oh-cable',     part:'arms', sub:'三头', name:'过顶绳索臂屈伸', sets:3, reps:12, rest:60},
+    {id:'narrow-press', part:'arms', sub:'三头', name:'窄距卧推', sets:4, reps:10, rest:90, compound:true},
+    {id:'seat-db-ext',  part:'arms', sub:'三头', name:'坐姿哑铃臂屈伸', sets:3, reps:12, rest:60},
+    {id:'wrist-curl',   part:'arms', sub:'前臂', name:'腕弯举', sets:3, reps:12, rest:60},
+    {id:'reverse-curl', part:'arms', sub:'前臂', name:'反向弯举', sets:3, reps:12, rest:60},
+    // 核心
+    {id:'crunch',       part:'core', sub:'上腹', name:'卷腹', sets:3, reps:12, rest:60},
+    {id:'cable-crunch', part:'core', sub:'上腹', name:'绳索卷腹', sets:3, reps:12, rest:60},
+    {id:'hanging-leg',  part:'core', sub:'下腹', name:'悬垂举腿', sets:3, reps:12, rest:60},
+    {id:'reverse-crunch',part:'core',sub:'下腹', name:'反向卷腹', sets:3, reps:12, rest:60},
+    {id:'russian',      part:'core', sub:'侧腹', name:'俄式转体', sets:3, reps:12, rest:60},
+    {id:'side-bend',    part:'core', sub:'侧腹', name:'哑铃体侧屈', sets:3, reps:12, rest:60},
+    {id:'plank',        part:'core', sub:'深层稳定', name:'平板支撑', sets:3, reps:45, rest:60, unit:'秒'},
+    {id:'ab-wheel',     part:'core', sub:'深层稳定', name:'跪姿健腹轮', sets:3, reps:12, rest:60}
+  ];
+  const EX_BY_ID = {};
+  EXERCISES.forEach(e => EX_BY_ID[e.id] = e);
+
+  // 历史区间值 → 单一数字：上限超过 12 取 12；计时类动作（秒）保留原值
+  function legacyReps(repMin, repMax, unit){
+    const max = Number(repMax || repMin || 12);
+    if(unit === '秒') return max;
+    return Math.max(1, Math.min(max, 12));
+  }
+
+  const STORAGE_KEY = 'gym-plan-v2';
+  const WARMUP_SEC = 10 * 60;
+  const COOLDOWN_SEC = 5 * 60;
+  const TRANSITION_SEC = 90;
+  const TRANSITION_REST = 90;
+  const MIN_REST = 30;
+  const MIN_SETS = 2;
+
+  /* ================= 本地状态 ================= */
+  function defaultState(){
+    const selected = {};
+    PARTS.forEach(p => selected[p.id] = []);
+    return {selected, target:null, water:15, customExercises:[], presets:{}, combos:[], order:[], calendar:{}};
+  }
+  function loadState(){
+    const empty = defaultState();
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return empty;
+      const p = JSON.parse(raw);
+      const selected = {};
+      const customs = (p && Array.isArray(p.customExercises)) ? p.customExercises
+        .filter(c => c && c.name)
+        .map(c => Object.assign({}, c, {
+          reps: (typeof c.reps === 'number') ? c.reps : legacyReps(c.repMin, c.repMax, c.unit)
+        })) : [];
+      const findEx = id => EX_BY_ID[id] || customs.find(c => c.id === id) || null;
+      const fixItem = it => {
+        if(!it || !it.id) return null;
+        const ex = findEx(it.id);
+        if(!ex) return null;
+        const reps = (typeof it.reps === 'number') ? it.reps : legacyReps(it.repMin, it.repMax, ex.unit);
+        return {id:it.id, sets: it.sets || ex.sets, reps, rest: it.rest || ex.rest};
+      };
+      PARTS.forEach(pt => {
+        const arr = p && p.selected && Array.isArray(p.selected[pt.id]) ? p.selected[pt.id] : [];
+        selected[pt.id] = arr.map(it => typeof it === 'string' ? fixItem({id:it}) : fixItem(it)).filter(Boolean);
+      });
+      // 预设内的区间值同样转换
+      const presets = {};
+      const rawPresets = (p && p.presets) || {};
+      Object.keys(rawPresets).forEach(pid => {
+        const list = rawPresets[pid];
+        if(!Array.isArray(list)) return;
+        presets[pid] = list.filter(x => x && Array.isArray(x.items)).map(x => ({
+          id: x.id || ('p' + Math.random().toString(36).slice(2, 8)),
+          name: x.name || '动作预设',
+          items: x.items.map(fixItem).filter(Boolean)
+        }));
+      });
+      const calendar = (p && p.calendar) || {};
+      // 多部位预设
+      const combos = (p && Array.isArray(p.combos) ? p.combos : []).map(c => {
+        const items = {};
+        const src = (c && c.items) || {};
+        PARTS.forEach(pt => {
+          const arr = Array.isArray(src[pt.id]) ? src[pt.id].map(fixItem).filter(Boolean) : [];
+          if(arr.length) items[pt.id] = arr;
+        });
+        return {
+          id: (c && c.id) || ('k' + Math.random().toString(36).slice(2, 8)),
+          name: (c && c.name) || '组合',
+          items
+        };
+      }).filter(c => Object.keys(c.items).length);
+      return {
+        selected,
+        target: (p && typeof p.target === 'number') ? p.target : null,
+        water: (p && typeof p.water === 'number') ? p.water : 15,
+        customExercises: customs,
+        presets,
+        combos,
+        order: (p && Array.isArray(p.order)) ? p.order.filter(x => typeof x === 'string') : [],
+        calendar
+      };
+    }catch(e){ return empty; }
+  }
+  const state = loadState();
+  function saveState(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+  }
+
+  /* ================= 工具 ================= */
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.prototype.slice.call(document.querySelectorAll(s));
+  const clamp = (n,min,max) => Math.min(max, Math.max(min, n));
+  const uid = () => 'c' + Date.now().toString(36) + Math.floor(Math.random()*1e4).toString(36);
+
+  function repsOf(item){ return (item && typeof item.reps === 'number') ? item.reps : ((item && item.ex ? item.ex.reps : 10) || 10); }
+  function workSec(item){
+    const reps = repsOf(item);
+    const unit = item.ex ? item.ex.unit : item.unit;
+    return unit === '秒' ? reps : reps * 3 + 25;
+  }
+  function itemSec(item){ return item.sets * workSec(item) + Math.max(0, item.sets - 1) * item.rest; }
+  function planSeconds(items){
+    if(!items.length) return 0;
+    let total = WARMUP_SEC + COOLDOWN_SEC;
+    items.forEach((it, i) => { total += itemSec(it); if(i < items.length - 1) total += TRANSITION_SEC; });
+    return total;
+  }
+  function fmtClock(sec){
+    sec = Math.max(0, Math.round(sec));
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    if(h > 0) return h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+  function fmtDate(d){
+    const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+    return y + '-' + m + '-' + dd;
+  }
+  function parseDate(s){ const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+  function todayStr(){ return fmtDate(new Date()); }
+
+  function allExercises(){ return EXERCISES.concat(state.customExercises.map(c => ({...c, custom:true}))); }
+  function exById(id){
+    if(EX_BY_ID[id]) return EX_BY_ID[id];
+    const c = state.customExercises.find(x => x.id === id);
+    return c ? {...c, custom:true} : null;
+  }
+  function defaultParams(ex){ return {sets:ex.sets||3, reps:(typeof ex.reps==='number'?ex.reps:10), rest:ex.rest||60}; }
+
+  function selectedSel(partId){ return state.selected[partId] || (state.selected[partId] = []); }
+
+  function selectedItems(){
+    const out = [];
+    PARTS.forEach(p => {
+      selectedSel(p.id).forEach(it => {
+        const ex = exById(it.id);
+        if(ex) out.push({ex, sets:it.sets, reps:repsOf(it), rest:it.rest});
+      });
+    });
+    return out;
+  }
+  // 按用户自定义顺序排列（未记录的追加到末尾，保持原有相对顺序）
+  function orderedItems(items){
+    const ord = state.order || [];
+    const pos = {};
+    ord.forEach((id, i) => { if(!(id in pos)) pos[id] = i; });
+    return items.map((it, i) => {
+      const id = it.ex ? it.ex.id : null;
+      const k = (id && (id in pos)) ? pos[id] : 1e6 + i;
+      return {it, i, k};
+    }).sort((a, b) => (a.k - b.k) || (a.i - b.i)).map(o => o.it);
+  }
+  function basePlanItems(){ return orderedItems(selectedItems()); }
+
+  function partEstimate(partId){
+    const items = selectedSel(partId).map(it => {
+      const ex = exById(it.id);
+      return ex ? {ex, sets:it.sets, rest:it.rest, reps:repsOf(it)} : null;
+    }).filter(Boolean);
+    return planSeconds(items);
+  }
+
+  /* ================= 时长压缩 ================= */
+  function compressPlan(baseItems, targetSec){
+    const original = baseItems.map(it => ({...it}));
+    const items = baseItems.map(it => ({...it}));
+    const originalSec = planSeconds(original);
+    const target = Math.max(0, targetSec);
+
+    if(target < originalSec - 1){
+      const room = items.reduce((sum, it) => sum + Math.max(0, (it.sets - 1) * (it.rest - MIN_REST)), 0);
+      const need = originalSec - target;
+      if(need > 0 && room > 0){
+        const ratio = Math.min(1, need / room);
+        items.forEach(it => {
+          if(it.rest <= MIN_REST) return;
+          const next = Math.max(MIN_REST, Math.round((MIN_REST + (it.rest - MIN_REST) * (1 - ratio)) / 5) * 5);
+          it.rest = Math.min(it.rest, next);
+        });
+      }
+      let guard = 0;
+      while(planSeconds(items) > target && guard < 120){
+        guard++;
+        const cands = items.filter(it => it.sets > MIN_SETS).sort((a,b)=>(b.sets-a.sets)||(b.rest-a.rest));
+        if(!cands.length) break;
+        cands[0].sets -= 1;
+      }
+    }
+    const compressedSec = planSeconds(items);
+    const changes = [];
+    items.forEach((it, i) => {
+      const before = original[i];
+      const bits = [];
+      if(before.sets !== it.sets) bits.push('组数 <b>' + before.sets + '</b> → <b>' + it.sets + '</b>');
+      if(before.rest !== it.rest) bits.push('休息 <b>' + before.rest + 's</b> → <b>' + it.rest + 's</b>');
+      if(bits.length) changes.push({name: it.ex.name, text: bits.join(' · ')});
+    });
+    return {
+      original, items, originalSec, compressedSec, targetSec: target,
+      reduced: compressedSec < originalSec - 1,
+      feasible: compressedSec <= target + 60,
+      changes
+    };
+  }
+
+  /* ================= 页面切换 ================= */
+  function show(name, instant){
+    const target = $('#screen-' + name);
+    if(!target) return;
+    const oldActive = document.querySelector('.screen.active');
+    if(oldActive === target) return;
+    // 先让新屏 active（绝对定位叠在旧屏下面，ready 但还看不见因为旧屏盖着）
+    target.classList.add('active');
+    if(instant){
+      // 立即切换：同步移除旧屏，配合无入场动画，避免闪一下
+      $$('.screen').forEach(el => { if(el !== target) el.classList.remove('active'); });
+    }else{
+      // 下一帧再隐藏旧屏 → 无缝过渡，不会黑屏
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          $$('.screen').forEach(el => { if(el !== target) el.classList.remove('active'); });
+        });
+      });
+    }
+    // 训练屏：如果已经在 work phase 才 renderWork（热身 phase 用 warmView）
+    if(name === 'train' && session && session.phase === 'work') renderWork();
+    const act = document.querySelector('.screen.active .scroll');
+    if(act) act.scrollTop = 0;
+    if(name === 'home') renderHome();
+    if(name === 'cal') renderCalendar();
+  }
+
+  /* ================= 首页 ================= */
+  function renderHome(){
+    const d = new Date();
+    const week = ['周日','周一','周二','周三','周四','周五','周六'];
+    $('#dateLabel').textContent = (d.getMonth()+1) + '月' + d.getDate() + '日 · ' + week[d.getDay()];
+    $('#calMonthBadge').textContent = (d.getMonth()+1) + '月';
+
+    // 本月训练天数
+    const ym = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    const days = Object.keys(state.calendar).filter(k => k.startsWith(ym)).length;
+    $('#calSummary').textContent = '本月已训练 ' + days + ' 天';
+
+    const grid = $('#partGrid');
+    grid.innerHTML = PARTS.map(p => {
+      const sel = selectedSel(p.id).length;
+      const total = EXERCISES.filter(e => e.part === p.id).length + state.customExercises.filter(c=>c.part===p.id).length;
+      return '<button class="part-card' + (sel ? ' selected' : '') + '" data-part="' + p.id + '" data-char="' + p.name + '">' +
+        '<span class="part-top"><span class="part-name">' + p.name + '</span>' +
+        (sel ? '<span class="part-flag">' + sel + '</span>' : '') + '</span>' +
+        '<span class="part-en">' + p.en + '</span>' +
+        '<span class="part-count">' + (sel ? '已选 ' + sel + ' 个动作' : '共 ' + total + ' 个动作') + '</span>' +
+      '</button>';
+    }).join('');
+
+    const items = basePlanItems();
+    const btn = $('#btnStart');
+    if(items.length){
+      const sec = planSeconds(items);
+      const partCount = PARTS.filter(p => selectedSel(p.id).length).length;
+      const sets = items.reduce((s,it) => s + it.sets, 0);
+      $('#homeSummary').textContent = items.length + ' 个动作 · ' + partCount + ' 个部位 · ' + sets + ' 组';
+      $('#homeEstimate').textContent = '约 ' + Math.round(sec/60) + ' 分钟';
+      btn.disabled = false;
+    }else{
+      $('#homeSummary').textContent = '还未选择动作';
+      $('#homeEstimate').textContent = '推荐 --';
+      btn.disabled = true;
+    }
+
+    renderHomeSel();
+    renderHomeCombos();
+  }
+
+  /* ---------- 首页：已选部位 ---------- */
+  let clearSelArmed = false, clearSelTimer = null;
+
+  function resetClearSelBtn(){
+    clearSelArmed = false;
+    if(clearSelTimer){ clearTimeout(clearSelTimer); clearSelTimer = null; }
+    $('#btnClearSel').classList.remove('arm');
+  }
+
+  function renderHomeSel(){
+    const picked = PARTS.filter(p => selectedSel(p.id).length);
+    $('#selBlock').classList.toggle('hidden', !picked.length);
+    if(!picked.length){
+      resetClearSelBtn();
+      $('#selPartsRow').innerHTML = '';
+      $('#selList').innerHTML = '';
+      return;
+    }
+    $('#selPartsRow').innerHTML = picked.map(p =>
+      '<button class="sel-part" data-selpart="' + p.id + '">' +
+        '<span class="nm">' + p.name + '</span>' +
+        '<span class="ct">' + selectedSel(p.id).length + ' 个动作</span>' +
+      '</button>'
+    ).join('');
+    const total = picked.reduce((s, p) => s + selectedSel(p.id).length, 0);
+    $('#selCount').textContent = picked.length + ' 个部位 · ' + total + ' 个动作';
+    // 默认动作清单
+    const rows = [];
+    picked.forEach(p => {
+      selectedSel(p.id).forEach(it => {
+        const ex = exById(it.id);
+        if(!ex) return;
+        rows.push('<div class="sel-item">' +
+          '<span class="pn">' + p.name + '</span>' +
+          '<span class="nm">' + ex.name + '</span>' +
+          '<span class="mt">' + it.sets + ' 组 × ' + repsOf(it) + ' ' + (ex.unit || '次') + '</span>' +
+        '</div>');
+      });
+    });
+    $('#selList').innerHTML = rows.join('');
+  }
+
+  function clearAllSelection(){
+    PARTS.forEach(p => { state.selected[p.id] = []; });
+    saveState();
+    renderHome();
+  }
+
+  // 已选部位区：二次点击确认
+  function clearFromBlock(){
+    const btn = $('#btnClearSel');
+    if(!clearSelArmed){
+      clearSelArmed = true;
+      btn.classList.add('arm');
+      clearSelTimer = setTimeout(resetClearSelBtn, 3000);
+      return;
+    }
+    resetClearSelBtn();
+    clearAllSelection();
+  }
+
+  /* ---------- 首页：多部位预设 ---------- */
+  let comboEditing = null, comboMenuId = null;
+
+  function comboPartIds(c){ return PARTS.filter(p => (c.items[p.id] || []).length).map(p => p.id); }
+  function comboTotal(c){ return comboPartIds(c).reduce((s, id) => s + c.items[id].length, 0); }
+  function comboPartsName(c){ return comboPartIds(c).map(id => (PART_BY_ID[id] || {}).name || '').join('+'); }
+
+  function renderHomeCombos(){
+    const list = state.combos || [];
+    $('#comboBlock').classList.toggle('hidden', !list.length);
+    if(!list.length){ $('#comboRow').innerHTML = ''; return; }
+    $('#comboRow').innerHTML = list.map(c =>
+      '<div class="combo-card">' +
+        '<button class="combo-main" data-combo="' + c.id + '">' +
+          '<span class="cn">' + c.name + '</span>' +
+          '<span class="cs">' + comboPartsName(c) + ' · ' + comboTotal(c) + ' 个动作</span>' +
+        '</button>' +
+        '<button class="combo-more" data-combo-menu="' + c.id + '" aria-label="更多操作">···</button>' +
+      '</div>'
+    ).join('');
+  }
+
+  function openSaveCombo(){
+    const picked = PARTS.filter(p => selectedSel(p.id).length);
+    if(!picked.length) return;
+    comboEditing = null;
+    $('#comboModalTitle').textContent = '保存组合预设';
+    $('#comboModalSub').textContent = picked.map(p => p.name + ' ' + selectedSel(p.id).length + ' 个动作').join(' · ');
+    $('#comboName').value = '';
+    $('#comboName').placeholder = picked.map(p => p.name).join('+');
+    $('#comboModal').classList.remove('hidden');
+    setTimeout(() => $('#comboName').focus(), 100);
+  }
+
+  function saveCombo(){
+    const input = $('#comboName');
+    const name = input.value.trim() || input.placeholder || '组合';
+    if(comboEditing){
+      const c = (state.combos || []).find(x => x.id === comboEditing);
+      if(c) c.name = name;
+    }else{
+      const items = {};
+      PARTS.forEach(p => {
+        const list = selectedSel(p.id);
+        if(list.length) items[p.id] = list.map(it => ({...it}));
+      });
+      state.combos.push({
+        id: 'k' + Date.now().toString(36) + Math.floor(Math.random()*1e4).toString(36),
+        name, items
+      });
+    }
+    comboEditing = null;
+    saveState();
+    $('#comboModal').classList.add('hidden');
+    renderHome();
+  }
+
+  function applyCombo(id){
+    const c = (state.combos || []).find(x => x.id === id);
+    if(!c) return;
+    PARTS.forEach(p => { state.selected[p.id] = (c.items[p.id] || []).map(it => ({...it})); });
+    saveState();
+    resetClearSelBtn();
+    renderHome();
+  }
+
+  function openComboMenu(id){
+    const c = (state.combos || []).find(x => x.id === id);
+    if(!c) return;
+    comboMenuId = id;
+    $('#cmmName').textContent = c.name;
+    $('#comboMenuModal').classList.remove('hidden');
+  }
+
+  function renameCombo(){
+    const c = (state.combos || []).find(x => x.id === comboMenuId);
+    if(!c) return;
+    comboEditing = comboMenuId;
+    $('#comboModalTitle').textContent = '重命名组合预设';
+    $('#comboModalSub').textContent = comboPartsName(c) + ' · ' + comboTotal(c) + ' 个动作';
+    $('#comboName').value = c.name;
+    $('#comboName').placeholder = comboPartsName(c);
+    $('#comboMenuModal').classList.add('hidden');
+    $('#comboModal').classList.remove('hidden');
+    setTimeout(() => $('#comboName').focus(), 100);
+  }
+
+  function deleteCombo(){
+    state.combos = (state.combos || []).filter(x => x.id !== comboMenuId);
+    comboMenuId = null;
+    saveState();
+    $('#comboMenuModal').classList.add('hidden');
+    renderHome();
+  }
+
+  /* ================= 动作库 ================= */
+  let currentPart = null;
+
+  function openLibrary(partId){
+    currentPart = partId;
+    renderLibrary();
+    show('lib');
+  }
+
+  function renderLibrary(){
+    const part = PART_BY_ID[currentPart];
+    if(!part) return;
+    $('#libEn').textContent = part.en + ' · 动作库';
+    $('#libTitle').textContent = part.name;
+    updateLibBar();
+
+    // 预设
+    renderPresets(part.id);
+
+    // 分组渲染
+    const container = $('#subgroupContainer');
+    const all = allExercises().filter(e => e.part === part.id);
+    let html = '';
+    part.subs.forEach(sub => {
+      const list = all.filter(e => e.sub === sub);
+      if(!list.length) return;
+      html += '<div class="subgroup"><div class="subgroup-head"><span class="bar"></span><span>' + sub + '</span></div>';
+      list.forEach(ex => html += renderExerciseCard(ex));
+      html += '</div>';
+    });
+    container.innerHTML = html;
+
+    // 我的动作置顶（点 ⋯ 可重命名 / 编辑 / 删除）
+    const customs = all.filter(e => e.custom);
+    const myBox = $('#myExContainer');
+    myBox.innerHTML = customs.length
+      ? '<div class="subgroup"><div class="subgroup-head"><span class="bar"></span><span>我的动作</span><span class="my-hint">点 ⋯ 可管理</span></div>' +
+        customs.map(ex => renderExerciseCard(ex)).join('') + '</div>'
+      : '';
+  }
+
+  function renderExerciseCard(ex){
+    const sel = selectedSel(currentPart).find(it => it.id === ex.id);
+    const on = !!sel;
+    const sets = sel ? sel.sets : ex.sets;
+    const reps = sel ? repsOf(sel) : (typeof ex.reps === 'number' ? ex.reps : 10);
+    const rest = sel ? sel.rest : ex.rest;
+    const unit = ex.unit || '次';
+    return '<div class="ex-card' + (on ? ' selected' : '') + '" data-ex="' + ex.id + '">' +
+      '<div class="ex-top">' +
+        '<div class="ex-head">' +
+          '<span class="ex-name">' + ex.name + '</span>' +
+          (ex.custom ? '<button class="ex-more" data-custom-menu="' + ex.id + '" aria-label="管理我的动作">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>' +
+          '</button>' : '') +
+          '<span class="check">' + (on ? CHECK_SVG : '') + '</span>' +
+        '</div>' +
+        '<span class="ex-meta">' + sets + ' 组 × ' + reps + ' ' + unit + ' · 休息 ' + rest + 's</span>' +
+      '</div>' +
+      '<div class="params">' +
+        '<div class="param"><div class="k">组数</div><div class="v"><button class="pbtn" data-act="sets-" aria-label="减少组数">-</button><span class="n">' + sets + '</span><button class="pbtn" data-act="sets+" aria-label="增加组数">+</button></div></div>' +
+        '<div class="param"><div class="k">' + (unit === '秒' ? '秒数' : '次数') + '</div><div class="v"><button class="pbtn" data-act="rep-" aria-label="减少次数">-</button><span class="n">' + reps + '</span><button class="pbtn" data-act="rep+" aria-label="增加次数">+</button></div></div>' +
+        '<div class="param"><div class="k">休息</div><div class="v"><button class="pbtn" data-act="rest-" aria-label="减少休息">-</button><span class="n' + (String(rest).length > 2 ? ' sm' : '') + '">' + rest + '</span><button class="pbtn" data-act="rest+" aria-label="增加休息">+</button></div></div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function updateLibBar(){
+    const part = PART_BY_ID[currentPart];
+    const list = selectedSel(currentPart);
+    const n = list.length;
+    $('#libCount').textContent = '已选 ' + n + ' 个动作';
+    $('#libSummary').textContent = '本部位已选 ' + n + ' 个动作';
+    $('#libEstimate').textContent = n ? '约 ' + Math.round(partEstimate(currentPart)/60) + ' 分钟' : '约 -- 分钟';
+  }
+
+  // 一次点击清空本部位已选动作与参数，停留在本部位动作库
+  function clearPart(){
+    if(!selectedSel(currentPart).length) return;
+    state.selected[currentPart] = [];
+    saveState();
+    renderLibrary();
+  }
+
+  function toggleExercise(exId){
+    const list = selectedSel(currentPart);
+    const idx = list.findIndex(it => it.id === exId);
+    const ex = exById(exId);
+    if(!ex) return;
+    if(idx > -1){
+      list.splice(idx, 1);
+    }else{
+      list.push({id:exId, ...defaultParams(ex)});
+    }
+    saveState();
+    renderLibrary();
+  }
+
+  function adjustParam(exId, act){
+    const list = selectedSel(currentPart);
+    const it = list.find(x => x.id === exId);
+    if(!it) return;
+    const step1 = {sets:1, reps:1, rest:5};
+    if(act === 'sets+') it.sets = clamp(it.sets+1, 1, 12);
+    else if(act === 'sets-') it.sets = clamp(it.sets-1, 1, 12);
+    else if(act === 'rep+') it.reps = clamp(repsOf(it)+1, 1, 99);
+    else if(act === 'rep-') it.reps = clamp(repsOf(it)-1, 1, 99);
+    else if(act === 'rest+') it.rest = clamp(it.rest+5, 15, 600);
+    else if(act === 'rest-') it.rest = clamp(it.rest-5, 15, 600);
+    saveState();
+    renderLibrary();
+  }
+
+  /* ================= 自定义动作 ================= */
+  let customEditPart = null;
+  let customEditing = null;   // 正在编辑的自定义动作 id
+  let customMenuId = null;    // 菜单里选中的自定义动作 id
+
+  function openCustomModal(){
+    customEditPart = currentPart;
+    customEditing = null;
+    $('#customModalTitle').textContent = '新建我的动作';
+    $('#customSaveLabel').textContent = '保存动作';
+    $('#customName').value = '';
+    $('#customSets').value = '';
+    $('#customReps').value = '';
+    $('#customRest').value = '';
+    $('#customModal').classList.remove('hidden');
+    setTimeout(()=>$('#customName').focus(), 100);
+  }
+  function saveCustom(){
+    const name = $('#customName').value.trim();
+    if(!name) return;
+    const sets = parseInt($('#customSets').value,10) || 3;
+    const reps = parseInt($('#customReps').value,10) || 12;
+    const rest = parseInt($('#customRest').value,10) || 60;
+    if(customEditing){
+      const ex = state.customExercises.find(x => x.id === customEditing);
+      if(ex){ ex.name = name; ex.sets = sets; ex.reps = reps; ex.rest = rest; }
+    }else{
+      const ex = {id:uid(), name, part:customEditPart, sub:'我的动作', sets, reps, rest, custom:true};
+      state.customExercises.push(ex);
+    }
+    customEditing = null;
+    saveState();
+    $('#customModal').classList.add('hidden');
+    renderLibrary();
+  }
+
+  function openCustomMenu(exId){
+    const ex = state.customExercises.find(x => x.id === exId);
+    if(!ex) return;
+    customMenuId = exId;
+    $('#cmName').textContent = ex.name;
+    $('#customMenu').classList.remove('hidden');
+  }
+  function closeCustomMenu(){
+    customMenuId = null;
+    $('#customMenu').classList.add('hidden');
+  }
+  function renameCustom(){
+    const ex = state.customExercises.find(x => x.id === customMenuId);
+    if(!ex) return;
+    $('#customMenu').classList.add('hidden');
+    $('#customNewName').value = ex.name;
+    $('#customNameModal').classList.remove('hidden');
+    setTimeout(()=>{ const i = $('#customNewName'); i.focus(); i.select(); }, 100);
+  }
+  function saveCustomName(){
+    const name = $('#customNewName').value.trim();
+    const ex = state.customExercises.find(x => x.id === customMenuId);
+    if(!name || !ex) return;
+    ex.name = name;
+    saveState();
+    $('#customNameModal').classList.add('hidden');
+    customMenuId = null;
+    renderLibrary();
+  }
+  function editCustom(){
+    const ex = state.customExercises.find(x => x.id === customMenuId);
+    if(!ex) return;
+    $('#customMenu').classList.add('hidden');
+    customEditing = ex.id;
+    $('#customModalTitle').textContent = '编辑我的动作';
+    $('#customSaveLabel').textContent = '保存修改';
+    $('#customName').value = ex.name;
+    $('#customSets').value = ex.sets;
+    $('#customReps').value = ex.reps;
+    $('#customRest').value = ex.rest;
+    $('#customModal').classList.remove('hidden');
+    setTimeout(()=>$('#customName').focus(), 100);
+  }
+  function deleteCustom(){
+    const id = customMenuId;
+    if(!id) return;
+    state.customExercises = state.customExercises.filter(x => x.id !== id);
+    // 同步清理已选动作、动作预设、组合预设与自定义顺序中的引用
+    Object.keys(state.selected).forEach(pid => {
+      state.selected[pid] = selectedSel(pid).filter(it => it.id !== id);
+    });
+    Object.keys(state.presets || {}).forEach(pid => {
+      state.presets[pid] = state.presets[pid]
+        .map(p => ({...p, items: p.items.filter(it => it.id !== id)}))
+        .filter(p => p.items.length);
+    });
+    (state.combos || []).forEach(c => {
+      Object.keys(c.items).forEach(pid => { c.items[pid] = c.items[pid].filter(it => it.id !== id); });
+    });
+    state.order = (state.order || []).filter(x => x !== id);
+    saveState();
+    $('#customMenu').classList.add('hidden');
+    customMenuId = null;
+    renderLibrary();
+  }
+
+  /* ================= 预设 ================= */
+  function renderPresets(partId){
+    const list = (state.presets[partId] || []);
+    const row = $('#presetRow');
+    if(!list.length){
+      row.innerHTML = '<span style="font-size:12px;color:var(--muted)">还没有动作预设，选好动作后可保存</span>';
+      return;
+    }
+    row.innerHTML = list.map(p =>
+      '<button class="preset-chip" data-preset="' + p.id + '">' +
+        '<span class="n">' + p.name + '</span>' +
+        '<span class="c">' + p.items.length + '动</span>' +
+      '</button>'
+    ).join('');
+  }
+
+  function applyPreset(presetId){
+    const list = state.presets[currentPart] || [];
+    const p = list.find(x => x.id === presetId);
+    if(!p) return;
+    state.selected[currentPart] = p.items.map(it => ({...it}));
+    saveState();
+    renderLibrary();
+  }
+
+  let menuPresetId = null;
+  function openPresetMenu(presetId){
+    menuPresetId = presetId;
+    const p = (state.presets[currentPart]||[]).find(x=>x.id===presetId);
+    $('#pmName').textContent = p ? p.name : '动作预设';
+    $('#presetMenu').classList.remove('hidden');
+  }
+
+  function presetSuggestName(){
+    const pt = PART_BY_ID[currentPart];
+    return (pt ? pt.name : '训练') + '-经典' + selectedSel(currentPart).length + '动作';
+  }
+
+  function openSavePreset(){
+    if(!selectedSel(currentPart).length){ alert('请先选择动作'); return; }
+    $('#presetModalTitle').textContent = '保存动作预设';
+    $('#presetName').value = '';
+    $('#presetName').placeholder = presetSuggestName();
+    menuPresetId = null;
+    $('#presetModal').classList.remove('hidden');
+    setTimeout(()=>$('#presetName').focus(), 100);
+  }
+  function savePreset(){
+    const input = $('#presetName');
+    // 未填写时直接采用示例名称
+    const name = input.value.trim() || (menuPresetId ? '' : input.placeholder);
+    if(!name) return;
+    if(!state.presets[currentPart]) state.presets[currentPart] = [];
+    if(menuPresetId){
+      const p = state.presets[currentPart].find(x=>x.id===menuPresetId);
+      if(p) p.name = name;
+    }else{
+      state.presets[currentPart].push({id:uid(), name, items: selectedSel(currentPart).map(it=>({...it}))});
+    }
+    saveState();
+    $('#presetModal').classList.add('hidden');
+    renderPresets(currentPart);
+  }
+  function deletePreset(){
+    state.presets[currentPart] = (state.presets[currentPart]||[]).filter(x=>x.id!==menuPresetId);
+    saveState();
+    $('#presetMenu').classList.add('hidden');
+    renderPresets(currentPart);
+  }
+  // 用当前已选动作与参数覆盖该动作预设
+  function updatePreset(){
+    const p = (state.presets[currentPart]||[]).find(x=>x.id===menuPresetId);
+    $('#presetMenu').classList.add('hidden');
+    if(!p || !selectedSel(currentPart).length) return;
+    p.items = selectedSel(currentPart).map(it=>({...it}));
+    saveState();
+    renderPresets(currentPart);
+  }
+  function renamePreset(){
+    const p = (state.presets[currentPart]||[]).find(x=>x.id===menuPresetId);
+    $('#presetModalTitle').textContent = '重命名动作预设';
+    $('#presetName').placeholder = presetSuggestName();
+    $('#presetName').value = p ? p.name : '';
+    $('#presetMenu').classList.add('hidden');
+    $('#presetModal').classList.remove('hidden');
+    setTimeout(()=>$('#presetName').focus(), 100);
+  }
+
+  /* ================= 训练安排 ================= */
+  let planBase = null, planRecMin = 0, planData = null;
+
+  function openPlan(){
+    const items = basePlanItems();
+    if(!items.length) return;
+    planBase = items;
+    planRecMin = Math.max(15, Math.round(planSeconds(planBase)/60));
+    const slider = $('#targetRange');
+    const maxMin = Math.max(180, Math.ceil(planRecMin/5)*5 + 30);
+    slider.min = 20; slider.max = maxMin; slider.step = 5;
+    let target = state.target != null ? state.target : planRecMin;
+    target = clamp(Math.round(target/5)*5, 20, maxMin);
+    slider.value = target;
+    updatePlanScreen();
+    show('plan');
+  }
+
+  function updatePlanScreen(){
+    if(!planBase) return;
+    const slider = $('#targetRange');
+    const maxMin = +slider.max;
+    const target = clamp(+slider.value, 20, maxMin);
+    planData = compressPlan(planBase, target * 60);
+
+    $('#recMin').textContent = planRecMin;
+    $('#planCounts').textContent = planBase.length + ' 个动作 · ' + planBase.reduce((s,it)=>s+it.sets,0) + ' 组';
+    $('#targetLabel').textContent = target + ' 分钟';
+    const fill = ((target - 20) / (maxMin - 20)) * 100;
+    slider.style.setProperty('--fill', fill + '%');
+
+    $$('#targetPresets .preset').forEach(btn => {
+      const v = parseInt(btn.dataset.min, 10);
+      const on = v === 0 ? (state.target === null) : (state.target !== null && v === target);
+      btn.classList.toggle('active', on);
+    });
+
+    const data = planData;
+    const wrap = $('#compareWrap');
+    if(target * 60 < data.originalSec - 40){
+      const bMin = Math.round(data.originalSec/60), aMin = Math.round(data.compressedSec/60);
+      const bSets = data.original.reduce((s,it)=>s+it.sets,0), aSets = data.items.reduce((s,it)=>s+it.sets,0);
+      let html = '<div class="compare">' +
+        '<div class="cmp"><span class="k">原计划</span><div class="num">' + bMin + '<small>分钟</small></div><span class="sub">' + bSets + ' 组</span></div>' +
+        '<div class="cmp-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>' +
+        '<div class="cmp after"><span class="k">压缩后</span><div class="num">' + aMin + '<small>分钟</small></div><span class="sub">' + aSets + ' 组</span></div>' +
+      '</div>';
+      if(data.changes.length){
+        html += '<div class="card change-card"><p class="card-title">方案变化</p>' +
+          data.changes.map(c => '<div class="change-row"><span class="name">' + c.name + '</span><span class="diff">' + c.text + '</span></div>').join('') +
+        '</div>';
+      }
+      if(!data.feasible){
+        html += '<div class="warn">已压到极限：实际约 ' + aMin + ' 分钟。</div>';
+      }
+      wrap.innerHTML = html;
+    }else{
+      wrap.innerHTML = '<div class="note-card"><span class="dot"></span><span>目标时长不低于推荐，按原计划进行。</span></div>';
+    }
+    $('#planListCount').textContent = planData.items.length + ' 个动作';
+    renderPlanList(planData.items);
+    $('#btnBegin').textContent = data.reduced ? '确认新方案，开始训练' : '确认，开始训练';
+  }
+
+  function renderPlanList(items){
+    $('#planList').innerHTML = items.map((it, i) => {
+      const ex = it.ex;
+      const p = PART_BY_ID[ex.part] || {name:'我的'};
+      return '<div class="plan-item" data-item-id="' + ex.id + '">' +
+        '<span class="pt">' + p.name + '</span>' +
+        '<div class="pi-main">' +
+          '<div class="pi-top"><span class="nm">' + ex.name + '</span><span class="meta">' + it.sets + ' 组 × ' + repsOf(it) + ' ' + (ex.unit||'次') + ' · 休 ' + it.rest + 's</span></div>' +
+        '</div>' +
+        '<span class="big-num">' + (i + 1) + '</span>' +
+        '<button class="plan-grip" aria-label="拖动排序"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="4" cy="3" r="1.2"/><circle cx="4" cy="8" r="1.2"/><circle cx="4" cy="13" r="1.2"/><circle cx="11" cy="3" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="11" cy="13" r="1.2"/></svg></button>' +
+      '</div>';
+    }).join('');
+  }
+
+  /* ---------- 完整清单：六点 grip 拖动排序（ghost 占位 + fixed 覆盖层） ---------- */
+  // 关键：dragging 行用 position:fixed 脱离文档流，用 ghost 占位符留在文档流里让位
+  // visualCenter 永远 = initialTop（触摸时记录，永不改变） + dy（手指绝对偏移）
+  // 彻底杜绝 insertBefore 改变 offsetTop 导致的 dy 爆炸漂移
+  function setupPlanGrip(){
+    const list = $('#planList');
+    if(!list) return;
+
+    let dragging = null, ghost = null, startY = 0, rowHeight = 0, initialTop = 0;
+    let pendingRow = null, pendingStartY = 0;
+
+    list.addEventListener('touchstart', e => {
+      const row = e.target.closest('.plan-item');
+      if(!row) return;
+      if(dragging){ onEnd(true); } // 防重入
+      // 立即 preventDefault：iOS 上一旦浏览器开始滚动就停止派发 touchmove
+      // 我们必须在 touchstart 就锁死滚动，否则拖拽的 transform 更新不到
+      e.preventDefault();
+
+      pendingRow = row;
+      pendingStartY = e.touches[0].clientY;
+    }, {passive:false});
+
+    list.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const curY = e.touches[0].clientY;
+
+      if(!dragging && pendingRow){
+        const dy = curY - pendingStartY;
+        if(Math.abs(dy) < 20) return; // 阈值（20px 足够过滤掉卡片上正常滑动）
+
+        const row = pendingRow;
+        startY = pendingStartY;
+        rowHeight = row.offsetHeight;
+        initialTop = row.getBoundingClientRect().top;
+        const initialLeft = row.getBoundingClientRect().left;
+        const initialWidth = row.getBoundingClientRect().width;
+
+        ghost = document.createElement('div');
+        ghost.className = row.className;
+        ghost.innerHTML = '';
+        ghost.style.visibility = 'hidden';
+        ghost.style.pointerEvents = 'none';
+        ghost.style.height = rowHeight + 'px';
+        list.insertBefore(ghost, row);
+
+        row.style.position = 'fixed';
+        row.style.top = initialTop + 'px';
+        row.style.left = initialLeft + 'px';
+        row.style.width = initialWidth + 'px';
+        row.style.zIndex = '1000';
+        row.style.margin = '0';
+        row.classList.add('dragging');
+        dragging = row;
+        pendingRow = null;
+      }
+
+      if(!dragging) return;
+      const dy = curY - startY;
+      dragging.style.transform = 'translateY(' + dy + 'px)';
+
+      const visualCenter = initialTop + dy + rowHeight / 2;
+
+      const rows = Array.prototype.slice.call(list.querySelectorAll('.plan-item'))
+        .filter(r => r !== ghost && r !== dragging);
+      let targetBefore = null;
+      let targetAfter = null;
+      for(const r of rows){
+        const rRect = r.getBoundingClientRect();
+        const rCenter = rRect.top + rRect.height / 2;
+        if(visualCenter < rCenter){ targetBefore = r; break; }
+        targetAfter = r;
+      }
+
+      if(targetBefore && ghost !== targetBefore.previousElementSibling){
+        list.insertBefore(ghost, targetBefore);
+      }else if(!targetBefore && targetAfter && ghost !== targetAfter.nextElementSibling){
+        list.insertBefore(ghost, targetAfter.nextSibling);
+      }
+    }, {passive:false});
+
+    function onEnd(force){
+      if(!dragging){ pendingRow = null; return; }
+      const row = dragging;
+      const ghostEl = ghost;
+      const savedInitialTop = initialTop;
+
+      const ghostTop = ghostEl.getBoundingClientRect().top;
+      const dyBack = ghostTop - savedInitialTop;
+      row.style.transform = 'translateY(' + dyBack + 'px)';
+      row.classList.remove('dragging');
+
+      dragging = null;
+      ghost = null;
+
+      setTimeout(() => {
+        row.style.position = '';
+        row.style.top = '';
+        row.style.left = '';
+        row.style.width = '';
+        row.style.zIndex = '';
+        row.style.margin = '';
+        row.style.transform = '';
+        try { list.insertBefore(row, ghostEl); } catch(e){}
+        if(ghostEl && ghostEl.parentNode) ghostEl.parentNode.removeChild(ghostEl);
+
+        const domIds = Array.prototype.slice.call(list.querySelectorAll('.plan-item'))
+          .map(el => el.dataset.itemId).filter(Boolean);
+        const rest = (state.order || []).filter(id => domIds.indexOf(id) === -1);
+        state.order = domIds.concat(rest);
+        saveState();
+        planBase = basePlanItems();
+        updatePlanScreen();
+      }, force ? 0 : 320);
+    }
+    list.addEventListener('touchend', () => onEnd(false));
+    list.addEventListener('touchcancel', () => onEnd(true));
+
+    // desktop fallback：点数字上移一位
+    list.addEventListener('click', e => {
+      if('ontouchstart' in window) return;
+      const num = e.target.closest('.big-num');
+      if(!num) return;
+      const row = num.closest('.plan-item');
+      if(!row) return;
+      const prev = row.previousElementSibling;
+      if(!prev) return;
+      const id = row.dataset.itemId;
+      const prevId = prev.dataset.itemId;
+      const a = state.order.indexOf(prevId);
+      const b = state.order.indexOf(id);
+      if(a >= 0 && b > a){
+        state.order[a] = id;
+        state.order[b] = prevId;
+        saveState();
+        planBase = basePlanItems();
+        updatePlanScreen();
+      }
+    });
+  }
+
+  /* ================= 喝水设置 ================= */
+  function waterText(){ return state.water ? ('每 ' + state.water + ' 分钟') : '已关闭'; }
+  function syncWaterLabels(){
+    $('#waterLabel').textContent = waterText();
+    renderWaterChips();
+    if(session){
+      session.waterMs = state.water * 60000;
+      session.nextWaterAt = state.water ? (Date.now() + session.waterMs) : 0;
+      updateWaterButton();
+    }
+  }
+  function renderWaterChips(){
+    $('#waterChips').innerHTML = [10,15,20,30,0].map(v => {
+      const label = v ? ('每 ' + v + ' 分钟') : '关闭';
+      return '<button class="chip' + (state.water === v ? ' active' : '') + '" data-water="' + v + '">' + label + '</button>';
+    }).join('');
+  }
+  function openWaterSheet(){ renderWaterChips(); $('#waterSheet').classList.remove('hidden'); }
+  function closeWaterSheet(){ $('#waterSheet').classList.add('hidden'); }
+
+  /* ================= 声音 / 震动 / 屏幕常亮 ================= */
+  let audioCtx = null;
+  function unlockAudio(){
+    try{
+      if(!audioCtx){ const AC = window.AudioContext || window.webkitAudioContext; if(AC) audioCtx = new AC(); }
+      if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }catch(e){}
+  }
+  function beep(freq, delay, dur){
+    if(!audioCtx) return;
+    try{
+      const t0 = audioCtx.currentTime + (delay || 0);
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = freq || 880;
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(0.22, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + (dur || 0.16));
+      osc.start(t0); osc.stop(t0 + (dur || 0.16) + 0.03);
+    }catch(e){}
+  }
+  function vibrate(p){ try{ if(navigator.vibrate) navigator.vibrate(p); }catch(e){} }
+
+  let wakeLock = null;
+  function requestWakeLock(){
+    try{ if('wakeLock' in navigator && !wakeLock){ navigator.wakeLock.request('screen').then(l=>{wakeLock=l}).catch(()=>{}); } }catch(e){}
+  }
+  function releaseWakeLock(){ try{ if(wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){} }
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && session) requestWakeLock(); });
+
+  /* ================= 训练会话 ================= */
+  let session = null, timer = null, lastPlanItems = null, toastTimer = null, waterDueTimer = null;
+
+  function clearWaterDue(){
+    if(waterDueTimer){ clearTimeout(waterDueTimer); waterDueTimer = null; }
+  }
+  // 做动作时已到喝水时间：进入休息后延迟 1 秒再弹，避免太突然
+  function scheduleWaterDue(){
+    clearWaterDue();
+    if(!session || !session.waterMs || session.waterOpen) return;
+    if(Date.now() < session.nextWaterAt) return;
+    waterDueTimer = setTimeout(() => {
+      waterDueTimer = null;
+      if(session && session.phase === 'rest' && !session.waterOpen) openWaterReminder();
+    }, 1000);
+  }
+
+  function startSession(items, phase){
+    unlockAudio();
+    clearWaterDue();
+    const queue = items.map(it => ({ex:it.ex, sets:it.sets, reps:repsOf(it), rest:it.rest}));
+    const totalSets = queue.reduce((s,it)=>s+it.sets,0);
+    lastPlanItems = queue.map(it => ({...it}));
+    const now = Date.now();
+    session = {
+      items: queue, exIndex:0, setNo:1, doneSets:0, totalSets,
+      startedAt: now, phase: phase || 'work', restEndsAt:0, restTotal:0,
+      waterMs: state.water * 60000,
+      nextWaterAt: state.water ? (now + state.water * 60000) : 0,
+      waterOpen: false,
+      warmPct: 0,
+      isPaused: false, pausedAt: 0, pausedMs: 0, pausedCount: 0
+    };
+    // 隐藏所有内容区
+    ['warmView','workView','restView','waterModal','exitModal','startToast'].forEach(id => $('#'+id).classList.add('hidden'));
+    // 根据 phase 显示对应内容
+    if(session.phase === 'warm'){
+      $('#trainTag').textContent = '热身';
+      $('#warmView').classList.remove('hidden');
+    } else {
+      $('#trainTag').textContent = currentItem()?.ex?.part || '训练';
+      $('#workView').classList.remove('hidden');
+    }
+    updateProgress();
+    updateWaterButton();
+    show('train');
+    requestWakeLock();
+    if(timer) clearInterval(timer);
+    timer = setInterval(tick, 200);
+  }
+
+  function showWork(){
+    if(!session) return;
+    session.phase = 'work';
+    $('#warmView').classList.add('hidden');
+    $('#restView').classList.add('hidden');
+    $('#workView').classList.remove('hidden');
+    $('#trainTag').textContent = currentItem()?.ex?.part || '训练';
+    renderWork();
+    updateProgress();
+  }
+
+  function currentItem(){ return session ? session.items[session.exIndex] : null; }
+  function progressPct(){
+    if(!session) return 0;
+    const warmPct = session.warmPct || 0;
+    // 训练进度 = 热身已跑的比例 + 训练部分占剩余的比例
+    const trainPct = session.totalSets ? (session.doneSets / session.totalSets) * (100 - warmPct) : 0;
+    return Math.min(100, warmPct + trainPct);
+  }
+  function updateProgress(){
+    if(!session) return;
+    $('#progressFill').style.width = progressPct() + '%';
+  }
+  function showToast(text){
+    const el = $('#startToast');
+    el.textContent = text;
+    el.classList.remove('hidden');
+    if(toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.add('hidden'), 1500);
+  }
+
+  function renderBarLoad(total, current){
+    const n = Math.max(1, total);
+    const gap = n >= 6 ? 1.6 : 2.6;
+    const slot = 66;
+    const pw = Math.max(4.5, Math.min(10, (slot - (n - 1) * gap) / n));
+    const CY = 34;
+    let plates = '';
+    for(let side = 0; side < 2; side++){
+      for(let i = 0; i < n; i++){
+        const hh = Math.max(36 - i * 3, 20);
+        const yy = CY - hh / 2;
+        const x = side === 0 ? 88 - (i + 1) * pw - i * gap : 152 + i * (pw + gap);
+        const lit = i + 1 <= current;
+        const cur = i + 1 === current;
+        plates += '<rect class="' + (cur ? 'bar-plate bar-cur' : 'bar-plate') + '"' +
+          ' x="' + x.toFixed(2) + '" y="' + yy.toFixed(2) + '" width="' + pw.toFixed(2) + '" height="' + hh + '"' +
+          ' rx="' + Math.min(3.5, pw / 2).toFixed(1) + '"' +
+          ' fill="' + (lit ? 'var(--accent)' : 'rgba(255,255,255,.09)') + '"' +
+          (lit ? '' : ' stroke="rgba(255,255,255,.15)" stroke-width="1"') + '/>';
+      }
+    }
+    $('#barLoad').innerHTML =
+      '<svg class="bar-svg" viewBox="0 0 240 68" role="img" aria-label="第 ' + current + ' 组，共 ' + total + ' 组">' +
+        '<rect x="26" y="31" width="188" height="6" rx="3" fill="#8A9099"/>' + plates +
+      '</svg>' +
+      '<p class="bar-cap">第 <b>' + current + '</b> / ' + total + ' 组</p>';
+  }
+
+  function renderWork(){
+    const it = currentItem();
+    if(!it) return;
+    const p = PART_BY_ID[it.ex.part] || {name:'我的动作'};
+    $('#trainTag').textContent = p.name;
+    $('#trainName').textContent = it.ex.name;
+    renderBarLoad(it.sets, session.setNo);
+    $('#trainReps').textContent = String(repsOf(it));
+    $('#trainUnit').textContent = it.ex.unit || '次';
+    $('#trainHint').textContent = it.ex.unit === '秒' ? '保持姿势，完成这组后自动开始休息' : '完成这组后自动开始休息';
+    updateProgress();
+    let next;
+    if(session.setNo < it.sets) next = '下一组：<b>' + repsOf(it) + ' ' + (it.ex.unit||'次') + '</b> · 休息 ' + it.rest + 's';
+    else if(session.exIndex < session.items.length - 1){
+      const nx = session.items[session.exIndex+1];
+      next = '下一个动作：<b>' + nx.ex.name + '</b> · ' + nx.sets + ' 组';
+    } else next = '最后一组，练完就收工';
+    $('#nextPeek').innerHTML = next;
+    if(session && session.phase === 'work'){
+      $('#workView').classList.remove('hidden');
+      $('#warmView').classList.add('hidden');
+    }
+    $('#restView').classList.add('hidden');
+  }
+
+  function completeSet(){
+    if(!session || session.phase !== 'work') return;
+    unlockAudio();
+    beep(760, 0, 0.1); vibrate(35);
+    const it = currentItem();
+    session.doneSets++; session.setNo++; updateProgress();
+    if(session.setNo <= it.sets){ startRest(it.rest, 'work-next'); return; }
+    if(session.exIndex < session.items.length - 1){
+      session.exIndex++; session.setNo = 1;
+      startRest(TRANSITION_REST, 'transition');
+      return;
+    }
+    finishSession();
+  }
+
+  function startRest(seconds, mode){
+    const it = currentItem();
+    if(!it) return;
+    session.phase = 'rest';
+    session.restMode = mode;
+    session.restEndsAt = Date.now() + seconds * 1000;
+    session.restTotal = seconds;
+    $('#workView').classList.add('hidden');
+    $('#restView').classList.remove('hidden');
+    $('#restLabel').textContent = mode === 'transition' ? '换动作' : '休息';
+    if(mode === 'transition'){
+      $('#restNext').innerHTML = restNextText();
+    }else{
+      $('#restNext').innerHTML = '下一组<br><b>' + it.ex.name + '</b> · 第 ' + session.setNo + '/' + it.sets + ' 组';
+    }
+    renderRest();
+    updateWaterButton();
+    scheduleWaterDue();
+  }
+
+  function restNextText(){
+    const nx = session.items[session.exIndex];
+    if(!nx) return '';
+    return '下一个动作<br><b>' + nx.ex.name + '</b> · ' + nx.sets + ' 组 × ' + repsOf(nx) + ' ' + (nx.ex.unit||'次');
+  }
+
+  function renderRest(){
+    if(!session) return;
+    const rem = Math.max(0, session.restEndsAt - Date.now());
+    const el = $('#restTime');
+    el.textContent = fmtClock(Math.ceil(rem / 1000));
+    el.classList.toggle('urgent', rem <= 5000);
+  }
+
+  function endRest(){
+    if(!session) return;
+    clearWaterDue();
+    session.phase = 'work';
+    $('#restTime').classList.remove('urgent');
+    beep(880,0,.12); beep(1175,.14,.16); vibrate([60,40,60]);
+    renderWork();
+    const it = currentItem();
+    if(it) showToast('开始 · ' + it.ex.name);
+  }
+
+  function tick(){
+    if(!session) return;
+    const now = Date.now();
+    const elapsedSec = (now - session.startedAt - (session.pausedMs || 0)) / 1000;
+    $('#trainElapsed').textContent = fmtClock(elapsedSec);
+    // 退出确认页的圆形暂停按钮里同步显示训练时长
+    if(!$('#exitModal').classList.contains('hidden')) $('#pauseClock').textContent = fmtClock(elapsedSec);
+    if(session.phase === 'warm'){
+      // 热身：只更新大计时，进度条不动（保持 0%）
+      $('#warmBigTime').textContent = fmtClock(elapsedSec);
+    } else if(session.phase === 'rest'){
+      if(session.restEndsAt - now <= 0) endRest(); else renderRest();
+    } else {
+      updateProgress();
+    }
+    // 喝水提醒只在休息时弹出；做动作期间只让按钮闪烁等待
+    if(session.waterMs && !session.waterOpen && session.phase === 'rest' && now >= session.nextWaterAt){
+      openWaterReminder();
+    }
+    updateWaterButton();
+  }
+
+  function updateWaterButton(){
+    if(!session) return;
+    const btn = $('#btnWater');
+    if(!session.waterMs){ $('#waterNextLabel').textContent = '关闭'; btn.classList.remove('due'); return; }
+    const rem = Math.max(0, session.nextWaterAt - Date.now());
+    $('#waterNextLabel').textContent = fmtClock(Math.ceil(rem/1000));
+    btn.classList.toggle('due', rem <= 0 && !session.waterOpen && session.phase !== 'rest');
+  }
+
+  function openWaterReminder(){
+    if(!session || session.waterOpen) return;
+    clearWaterDue();
+    session.waterOpen = true;
+    session.nextWaterAt = Date.now() + session.waterMs;
+    const mins = Math.max(1, Math.round((Date.now() - session.startedAt - (session.pausedMs || 0)) / 60000));
+    $('#waterModalSub').textContent = '已训练 ' + mins + ' 分钟';
+    $('#waterModal').classList.remove('hidden');
+    unlockAudio();
+    beep(1040,0,.12); beep(1310,.16,.12); beep(1560,.32,.16);
+    vibrate([80,60,80]);
+  }
+  function closeWaterReminder(){ $('#waterModal').classList.add('hidden'); if(session) session.waterOpen = false; }
+
+  /* ================= 暂停 / 继续 ================= */
+  function pauseTraining(){
+    if(!session || session.isPaused) return;
+    const now = Date.now();
+    session.isPaused = true;
+    session.pausedAt = now;
+    session.pausedCount = (session.pausedCount || 0) + 1;
+    // 冻结组间休息：记住剩余毫秒
+    if(session.phase === 'rest'){
+      session.restRemaining = Math.max(0, session.restEndsAt - now);
+    }
+    // 冻结喝水倒计时：记住剩余毫秒
+    if(session.waterMs){
+      session.waterRemaining = Math.max(0, session.nextWaterAt - now);
+    }
+    session.waterOpen = false;
+    clearWaterDue();
+    if(timer){ clearInterval(timer); timer = null; }
+    releaseWakeLock();
+    $('#exitModal').classList.add('hidden');
+    $('#waterModal').classList.add('hidden');
+    renderPause();
+    show('paused', true);
+  }
+
+  function renderPause(){
+    if(!session) return;
+    const it = currentItem();
+    const elapsed = Math.round((Date.now() - session.startedAt - (session.pausedMs || 0)) / 1000);
+    const where = session.phase === 'warm'
+      ? '热身中'
+      : (it ? '第 ' + (session.exIndex + 1) + '/' + session.items.length + ' 个动作 · 第 ' + session.setNo + '/' + it.sets + ' 组' : '—');
+    $('#pauseSummary').innerHTML =
+      '<div class="pause-row"><span>当前进度</span><b>' + where + '</b></div>' +
+      '<div class="pause-row"><span>已练时长</span><b>' + fmtClock(elapsed) + '</b></div>' +
+      '<div class="pause-row"><span>已暂停</span><b>' + (session.pausedCount || 0) + ' 次</b></div>';
+  }
+
+  function resumeTraining(){
+    if(!session || !session.isPaused) return;
+    const now = Date.now();
+    session.pausedMs = (session.pausedMs || 0) + (now - session.pausedAt);
+    session.pausedAt = 0;
+    session.isPaused = false;
+    // 恢复组间休息：从剩余秒数接着走
+    if(session.phase === 'rest' && typeof session.restRemaining === 'number'){
+      session.restEndsAt = now + session.restRemaining;
+      session.restRemaining = null;
+    }
+    // 恢复喝水倒计时
+    if(session.waterMs && typeof session.waterRemaining === 'number'){
+      session.nextWaterAt = now + session.waterRemaining;
+      session.waterRemaining = null;
+    }
+    show('train');
+    requestWakeLock();
+    if(timer) clearInterval(timer);
+    timer = setInterval(tick, 200);
+    tick();
+    if(session.phase === 'rest') scheduleWaterDue();
+  }
+
+  /* ================= 训练中：调整计划 ================= */
+  let roTemp = null;         // 打开面板时拷贝一份 items 用来编辑
+  let roDragIdx = null;      // 正在拖拽的 idx（相对于 roTemp）
+  let roRaf = null;          // rAF 合帧
+
+  function openReorder(){
+    if(session){
+      roTemp = session.items.map(it => ({...it}));
+    } else if(planData){
+      // 热身阶段还没 session，用 planData.items
+      roTemp = planData.items.map(it => ({ex:it.ex, sets:it.sets, reps:repsOf(it), rest:it.rest}));
+    } else {
+      return;
+    }
+    renderReorder();
+    $('#roSheet').classList.remove('hidden');
+  }
+  function closeReorder(){
+    $('#roSheet').classList.add('hidden');
+    roTemp = null; roDragIdx = null;
+    if(roRaf){ cancelAnimationFrame(roRaf); roRaf = null; }
+  }
+  // 锁定边界：idx <= lockEnd 的条目不可调整
+  // 换动作休息时，下一个动作还没开始，算待开始，可以被下面的动作替换
+  function roLockEnd(){
+    if(!session) return -1;
+    if(session.phase === 'warm') return -1;
+    if(session.phase === 'rest' && session.restMode === 'transition') return session.exIndex - 1;
+    return session.exIndex;
+  }
+
+  function renderReorder(){
+    const list = $('#roList');
+    const curIdx = session ? session.exIndex : 0;
+    const isWarm = session && session.phase === 'warm';
+    const inTransition = !!(session && session.phase === 'rest' && session.restMode === 'transition');
+    const lockEnd = roLockEnd();
+    list.innerHTML = roTemp.map((it, idx) => {
+      const isDone = !isWarm && idx < curIdx;
+      const isCur = !isWarm && !inTransition && idx === curIdx;
+      const label = isDone ? '已完成'
+        : ((isWarm || inTransition) ? '待开始'
+            : (isCur ? '进行中 · 第 ' + session.setNo + '/' + it.sets + ' 组' : '待开始'));
+      const cls = 'ro-item' + (isDone ? ' done' : (isCur ? ' current' : ''));
+      const handleIcon = isDone
+        ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12l4 4L19 7"/></svg>'
+        : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h.01M8 12h.01M8 18h.01M16 6h.01M16 12h.01M16 18h.01"/></svg>';
+      // promote 条件：
+      //   热身/换动作休息：idx 超过锁定区且不在首位，可以往上提
+      //   训练中：已完成/进行中锁死；紧跟进行中的那个提了没用
+      const canPromote = isWarm ? (idx >= 1) : (!isDone && !isCur && idx > lockEnd + 1);
+      const promote = canPromote
+        ? '<button class="ro-promote" data-promote="' + idx + '" aria-label="提到下一位"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg></button>' : '';
+      return '<div class="' + cls + '" data-ro-idx="' + idx + '">' +
+        '<div class="ro-handle">' + handleIcon + '</div>' +
+        '<div class="ro-main">' +
+          '<div class="ro-name">' + (it.ex.name || '') + '</div>' +
+          '<div class="ro-meta"><b>' + label + '</b> · ' + it.sets + ' 组 × ' + repsOf(it) + ' ' + (it.ex.unit || '次') + '</div>' +
+        '</div>' + promote +
+      '</div>';
+    }).join('');
+  }
+
+  // 热身时全部可拖；换动作休息时下一个动作也可拖；训练中只有未开始的能拖
+  function roCanDrag(idx){
+    if(!roTemp) return false;
+    return idx > roLockEnd();
+  }
+
+  function roMove(from, to){
+    const baseIdx = roLockEnd();
+    if(from === to || from <= baseIdx || to <= baseIdx) return;
+    const [it] = roTemp.splice(from, 1);
+    roTemp.splice(to > from ? to - 1 : to, 0, it);
+  }
+
+  /* ================= 完成 + 日历同步 ================= */
+  function finishSession(){
+    if(!session) return;
+    const durationSec = Math.round((Date.now() - session.startedAt - (session.pausedMs || 0)) / 1000);
+    const doneSets = session.doneSets;
+    const exCount = session.items.length;
+
+    // 生成粒子
+    spawnParticles();
+
+    // 同步日历：当天已有记录时合并为多轮（第 1 轮 / 加练）
+    const parts = [...new Set(session.items.map(it => PART_BY_ID[it.ex.part] ? PART_BY_ID[it.ex.part].name : '我的动作'))].join(' + ');
+    const today = todayStr();
+    const exist = state.calendar[today];
+    const rounds = exist
+      ? (exist.rounds ? exist.rounds.slice() : [{round: 1, parts: exist.parts, exerciseCount: exist.exerciseCount, duration: exist.duration, sets: exist.sets}])
+      : [];
+    rounds.push({round: rounds.length + 1, parts, exerciseCount: exCount, duration: durationSec, sets: doneSets});
+    const totalDur = rounds.reduce((s, r) => s + (r.duration || 0), 0);
+    const totalSets = rounds.reduce((s, r) => s + (r.sets || 0), 0);
+    const totalEx = rounds.reduce((s, r) => s + (r.exerciseCount || 0), 0);
+    const allParts = [...new Set(rounds.map(r => r.parts).filter(Boolean).join(' + ').split(' + '))].join(' + ');
+    const record = {
+      parts: allParts,
+      exerciseCount: totalEx,
+      duration: totalDur,
+      sets: totalSets,
+      intensity: calcIntensity(totalDur, totalSets),
+      rounds
+    };
+    state.calendar[today] = record;
+    saveState();
+
+    if(timer){ clearInterval(timer); timer = null; }
+    releaseWakeLock();
+    ['waterModal','exitModal','startToast'].forEach(id => $('#'+id).classList.add('hidden'));
+    clearWaterDue();
+    session = null;
+
+    $('#doneTime').textContent = fmtClock(durationSec);
+    $('#doneSets').textContent = doneSets;
+    $('#doneEx').textContent = exCount;
+    show('done');
+    unlockAudio();
+    beep(880,0,.14); beep(1108,.16,.14); beep(1318,.32,.22);
+    vibrate([80,50,80,50,120]);
+  }
+
+  function spawnParticles(){
+    const wrap = $('#checkWrap');
+    // 清除旧粒子
+    wrap.querySelectorAll('.particle').forEach(p => p.remove());
+    for(let i = 0; i < 16; i++){
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const angle = (Math.PI * 2 * i) / 16;
+      const dist = 60 + Math.random() * 40;
+      p.style.setProperty('--px', Math.cos(angle) * dist + 'px');
+      p.style.setProperty('--py', Math.sin(angle) * dist + 'px');
+      p.style.animationDelay = (.4 + Math.random() * .2) + 's';
+      wrap.appendChild(p);
+    }
+  }
+
+  function exitTraining(){
+    if(timer){ clearInterval(timer); timer = null; }
+    clearWaterDue();
+    releaseWakeLock();
+    session = null;
+    ['waterModal','exitModal','startToast'].forEach(id => $('#'+id).classList.add('hidden'));
+    show('home');
+  }
+
+  /* ================= 日历 ================= */
+  let calCursor = new Date();
+
+  function calcIntensity(durationSec, sets){
+    // 0~1，时长与组数综合
+    const dur = durationSec / 60; // 分钟
+    const s = clamp(dur / 120, 0, 1) * 0.6 + clamp(sets / 40, 0, 1) * 0.4;
+    return s;
+  }
+  function intensityColor(score){
+    // 主色 #C8F542 ≈ hsl(74, 88%, 61%)，训练越深明度越低
+    const l = 82 - score * 48; // 82 -> 34
+    return 'hsl(74, 88%, ' + l.toFixed(1) + '%)';
+  }
+
+  function renderCalendar(){
+    const y = calCursor.getFullYear(), m = calCursor.getMonth();
+    $('#calMonthTitle').textContent = y + '年' + (m+1) + '月';
+
+    const first = new Date(y, m, 1);
+    const startWeekday = first.getDay();
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+    const prevDays = new Date(y, m, 0).getDate();
+    const today = todayStr();
+
+    let html = '';
+    // 上月尾部
+    for(let i = startWeekday - 1; i >= 0; i--){
+      html += '<div class="cal-day other"><span class="d">' + (prevDays - i) + '</span></div>';
+    }
+    for(let d = 1; d <= daysInMonth; d++){
+      const key = fmtDate(new Date(y, m, d));
+      const rec = state.calendar[key];
+      let bg = '';
+      if(rec){ bg = 'background:' + intensityColor(rec.intensity||0.5) + ';color:#0B0D0F;border-color:transparent'; }
+      const isToday = key === today ? ' today' : '';
+      html += '<div class="cal-day' + isToday + '" style="' + bg + '" data-date="' + key + '"><span class="d">' + d + '</span></div>';
+    }
+    // 下月填充
+    const totalCells = startWeekday + daysInMonth;
+    const tail = (7 - totalCells % 7) % 7;
+    for(let d = 1; d <= tail; d++){
+      html += '<div class="cal-day other"><span class="d">' + d + '</span></div>';
+    }
+    $('#calDays').innerHTML = html;
+
+    // 当月统计
+    const ymPrefix = y + '-' + String(m+1).padStart(2,'0');
+    const monthRecords = Object.entries(state.calendar).filter(([k]) => k.startsWith(ymPrefix));
+    const totalMin = Math.round(monthRecords.reduce((s,[,r])=>s+(r.duration||0),0) / 60);
+    $('#calStats').innerHTML =
+      '<div><strong>' + monthRecords.length + '</strong><span>训练天数</span></div>' +
+      '<div><strong>' + totalMin + '</strong><span>总分钟</span></div>' +
+      '<div><strong>' + monthRecords.reduce((s,[,r])=>s+(r.sets||0),0) + '</strong><span>总组数</span></div>';
+  }
+
+  let detailDate = null, detailRec = null;
+  function openCalDetail(dateStr){
+    detailDate = dateStr;
+    const rec = state.calendar[dateStr];
+    detailRec = rec;
+    const d = parseDate(dateStr);
+    $('#cdDate').textContent = (d.getMonth()+1) + '月' + d.getDate() + '日';
+    if(rec){
+      let html =
+        '<div class="record-item"><span class="lp">训练部位</span><span class="rv">' + (rec.parts||'-') + '</span></div>' +
+        '<div class="record-item"><span class="lp">动作数</span><span class="rv">' + (rec.exerciseCount||0) + ' 个</span></div>' +
+        '<div class="record-item"><span class="lp">时长</span><span class="rv">' + fmtClock(rec.duration||0) + '</span></div>' +
+        '<div class="record-item"><span class="lp">组数</span><span class="rv">' + (rec.sets||0) + ' 组</span></div>';
+      if(rec.rounds && rec.rounds.length > 1){
+        html += rec.rounds.map(r =>
+          '<div class="round-block">' +
+            '<div class="round-title">' + (r.round === 1 ? '第 1 轮' : '加练') + '</div>' +
+            '<div class="record-item"><span class="lp">训练部位</span><span class="rv">' + (r.parts||'-') + '</span></div>' +
+            '<div class="record-item"><span class="lp">时长</span><span class="rv">' + fmtClock(r.duration||0) + '</span></div>' +
+            '<div class="record-item"><span class="lp">动作 / 组数</span><span class="rv">' + (r.exerciseCount||0) + ' 个 · ' + (r.sets||0) + ' 组</span></div>' +
+          '</div>'
+        ).join('');
+      }
+      $('#cdRecords').innerHTML = html;
+    }else{
+      $('#cdRecords').innerHTML = '<p style="color:var(--muted);text-align:center;padding:12px 0">这天还没有训练记录</p>';
+    }
+    $('#calDetailModal').classList.remove('hidden');
+  }
+
+  function openRecordModal(dateStr){
+    detailDate = dateStr;
+    const rec = state.calendar[dateStr];
+    detailRec = rec;
+    const d = parseDate(dateStr);
+    $('#recordModalTitle').textContent = rec ? '编辑训练记录' : '补录训练 · ' + (d.getMonth()+1) + '月' + d.getDate() + '日';
+    $('#recParts').value = rec ? (rec.parts || '') : '';
+    $('#recCount').value = rec ? (rec.exerciseCount || '') : '';
+    $('#recDuration').value = rec ? Math.round((rec.duration||0)/60) : '';
+    $('#btnRecordDelete').style.display = rec ? 'flex' : 'none';
+    $('#recordModal').classList.remove('hidden');
+  }
+
+  function saveRecord(){
+    const parts = $('#recParts').value.trim() || '未记录';
+    const count = parseInt($('#recCount').value,10) || 0;
+    const durMin = parseInt($('#recDuration').value,10) || 0;
+    const durSec = durMin * 60;
+    const prev = state.calendar[detailDate];
+    const sets = prev ? prev.sets : count * 3;
+    state.calendar[detailDate] = {parts, exerciseCount:count, duration:durSec, sets, intensity:calcIntensity(durSec, sets)};
+    saveState();
+    $('#recordModal').classList.add('hidden');
+    $('#calDetailModal').classList.add('hidden');
+    renderCalendar();
+    if($('#screen-home').classList.contains('active')) renderHome();
+  }
+  function deleteRecord(){
+    delete state.calendar[detailDate];
+    saveState();
+    $('#recordModal').classList.add('hidden');
+    $('#calDetailModal').classList.add('hidden');
+    renderCalendar();
+  }
+
+  /* ================= 事件绑定 ================= */
+  $('#partGrid').addEventListener('click', e => {
+    const card = e.target.closest('[data-part]');
+    if(card) openLibrary(card.dataset.part);
+  });
+  $('#calEntry').addEventListener('click', () => { calCursor = new Date(); show('cal'); });
+  $('#btnStart').addEventListener('click', openPlan);
+
+  // 清空（动作库 / 首页已选部位）
+  $('#btnClearSel').addEventListener('click', clearFromBlock);
+  $('#btnClearPart').addEventListener('click', clearPart);
+  $('#selPartsRow').addEventListener('click', e => {
+    const chip = e.target.closest('[data-selpart]');
+    if(chip) openLibrary(chip.dataset.selpart);
+  });
+
+  // 多部位预设
+  $('#btnSaveCombo').addEventListener('click', openSaveCombo);
+  $('#comboRow').addEventListener('click', e => {
+    const more = e.target.closest('[data-combo-menu]');
+    if(more){ openComboMenu(more.dataset.comboMenu); return; }
+    const main = e.target.closest('[data-combo]');
+    if(main) applyCombo(main.dataset.combo);
+  });
+  $('#btnComboSave').addEventListener('click', saveCombo);
+  $('#btnComboCancel').addEventListener('click', () => { comboEditing = null; $('#comboModal').classList.add('hidden'); });
+  $('#btnComboRename').addEventListener('click', renameCombo);
+  $('#btnComboDelete').addEventListener('click', deleteCombo);
+  $('#btnComboMenuCancel').addEventListener('click', () => $('#comboMenuModal').classList.add('hidden'));
+
+  // 完整清单 grip 拖动排序
+  setupPlanGrip();
+
+  $('#btnLibBack').addEventListener('click', () => show('home'));
+  $('#btnLibDone').addEventListener('click', () => show('home'));
+  $('#btnAddCustom').addEventListener('click', openCustomModal);
+  $('#btnCustomSave').addEventListener('click', saveCustom);
+  $('#btnCustomCancel').addEventListener('click', () => $('#customModal').classList.add('hidden'));
+
+  // 我的动作：⋯ 菜单 / 重命名 / 编辑参数 / 删除
+  $('#btnRenameCustom').addEventListener('click', renameCustom);
+  $('#btnEditCustom').addEventListener('click', editCustom);
+  $('#btnDeleteCustom').addEventListener('click', deleteCustom);
+  $('#btnCustomMenuCancel').addEventListener('click', closeCustomMenu);
+  $('#btnCustomNameSave').addEventListener('click', saveCustomName);
+  $('#btnCustomNameCancel').addEventListener('click', () => { customMenuId = null; $('#customNameModal').classList.add('hidden'); });
+
+  // 已选中的卡片：只有点勾才取消选择，避免误触；未选中时点整卡即可选中
+  function onExCardTap(card, e){
+    const exId = card.dataset.ex;
+    const pbtn = e.target.closest('.pbtn');
+    if(pbtn){ adjustParam(exId, pbtn.dataset.act); return; }
+    const on = card.classList.contains('selected');
+    if(on && !e.target.closest('.check')) return;
+    toggleExercise(exId);
+  }
+
+  function onMyExClick(e){
+    const more = e.target.closest('[data-custom-menu]');
+    if(more){ e.stopPropagation(); openCustomMenu(more.dataset.customMenu); return; }
+    const card = e.target.closest('.ex-card');
+    if(!card) return;
+    onExCardTap(card, e);
+  }
+  $('#myExContainer').addEventListener('click', onMyExClick);
+
+  $('#subgroupContainer').addEventListener('click', e => {
+    const card = e.target.closest('.ex-card');
+    if(!card) return;
+    onExCardTap(card, e);
+  });
+
+  // 预设
+  $('#btnSavePreset').addEventListener('click', openSavePreset);
+  $('#presetRow').addEventListener('click', e => {
+    const chip = e.target.closest('[data-preset]');
+    if(chip){ applyPreset(chip.dataset.preset); return; }
+  });
+  // 长按预设打开菜单（移动端 long-press 用 contextmenu 模拟）
+  $('#presetRow').addEventListener('contextmenu', e => {
+    const chip = e.target.closest('[data-preset]');
+    if(chip){ e.preventDefault(); openPresetMenu(chip.dataset.preset); }
+  });
+  // 为方便，双击也可打开菜单
+  let lastTap = 0;
+  $('#presetRow').addEventListener('click', e => {
+    const chip = e.target.closest('[data-preset]');
+    if(!chip) return;
+    const now = Date.now();
+    if(now - lastTap < 350){ openPresetMenu(chip.dataset.preset); }
+    lastTap = now;
+  });
+  $('#btnPresetSave').addEventListener('click', savePreset);
+  $('#btnPresetCancel').addEventListener('click', () => $('#presetModal').classList.add('hidden'));
+  $('#btnRenamePreset').addEventListener('click', renamePreset);
+  $('#btnUpdatePreset').addEventListener('click', updatePreset);
+  $('#btnDeletePreset').addEventListener('click', deletePreset);
+  $('#btnPresetMenuCancel').addEventListener('click', () => $('#presetMenu').classList.add('hidden'));
+
+  // 训练安排
+  $('#btnPlanBack').addEventListener('click', () => show('home'));
+  $('#targetRange').addEventListener('input', () => {
+    if(!planBase) return;
+    state.target = +$('#targetRange').value;
+    saveState();
+    updatePlanScreen();
+  });
+  $('#targetPresets').addEventListener('click', e => {
+    const btn = e.target.closest('[data-min]');
+    if(!btn) return;
+    const v = parseInt(btn.dataset.min, 10);
+    const slider = $('#targetRange');
+    if(v === 0){ state.target = null; slider.value = clamp(planRecMin, +slider.min, +slider.max); }
+    else{ state.target = clamp(v, +slider.min, +slider.max); slider.value = state.target; }
+    saveState();
+    updatePlanScreen();
+  });
+  $('#btnBegin').addEventListener('click', () => {
+    if(!planData) return;
+    startSession(planData.items, 'warm');
+  });
+  $('#btnWarmDone').addEventListener('click', () => {
+    if(!session || session.phase !== 'warm') return;
+    session.phase = 'work';
+    // 热身结束：进度条直接跳到 10%（热身占比），然后训练按组数驱动
+    session.warmPct = 10;
+    showWork();
+  });
+
+  // 喝水
+  $('#btnWaterPlan').addEventListener('click', openWaterSheet);
+  $('#btnWater').addEventListener('click', openWaterSheet);
+  $('#waterChips').addEventListener('click', e => {
+    const chip = e.target.closest('[data-water]');
+    if(!chip) return;
+    state.water = parseInt(chip.dataset.water, 10) || 0;
+    saveState();
+    syncWaterLabels();
+  });
+  $('#btnWaterSheetDone').addEventListener('click', closeWaterSheet);
+  $('#waterSheet').addEventListener('click', e => { if(e.target === $('#waterSheet')) closeWaterSheet(); });
+
+  // 训练
+  $('#btnDoneSet').addEventListener('click', completeSet);
+  $('#btnSkipRest').addEventListener('click', endRest);
+  $('#btnAdd15').addEventListener('click', () => {
+    if(!session || session.phase !== 'rest') return;
+    session.restEndsAt += 15000;
+    session.restTotal += 15000;
+    renderRest();
+  });
+  $('#btnExit').addEventListener('click', () => {
+    if(!session) return;
+    $('#pauseClock').textContent = fmtClock((Date.now() - session.startedAt - (session.pausedMs || 0)) / 1000);
+    const it = session.items[session.exIndex];
+    $('#exitHeadMeta').textContent = session.phase === 'warm'
+      ? '热身中'
+      : (it ? it.ex.name + ' · 第 ' + (session.exIndex + 1) + '/' + session.items.length + ' 个 · 第 ' + session.setNo + '/' + it.sets + ' 组' : '');
+    const pct = Math.round(progressPct());
+    $('#exitProgressFill').style.width = pct + '%';
+    $('#exitProgressPct').textContent = pct + '%';
+    $('#exitModal').classList.remove('hidden');
+  });
+  $('#btnExitCancel').addEventListener('click', () => $('#exitModal').classList.add('hidden'));
+  $('#btnExitConfirm').addEventListener('click', exitTraining);
+  $('#exitModal').addEventListener('click', e => { if(e.target === $('#exitModal')) $('#exitModal').classList.add('hidden'); });
+  $('#btnPause').addEventListener('click', pauseTraining);
+  $('#btnResume').addEventListener('click', resumeTraining);
+  $('#btnWaterOk').addEventListener('click', closeWaterReminder);
+
+  // 完成
+  $('#btnDoneHome').addEventListener('click', () => show('home'));
+  $('#btnAgain').addEventListener('click', () => { show('home'); });
+
+  // 日历
+  $('#btnCalBack').addEventListener('click', () => show('home'));
+  $('#btnCalPrev').addEventListener('click', () => { calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()-1, 1); renderCalendar(); });
+  $('#btnCalNext').addEventListener('click', () => { calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()+1, 1); renderCalendar(); });
+  $('#calDays').addEventListener('click', e => {
+    const cell = e.target.closest('.cal-day');
+    if(!cell || cell.classList.contains('other')) return;
+    openCalDetail(cell.dataset.date);
+  });
+  $('#btnCalDetailClose').addEventListener('click', () => $('#calDetailModal').classList.add('hidden'));
+  $('#btnAddRecord').addEventListener('click', () => openRecordModal(detailDate));
+  $('#btnRecordSave').addEventListener('click', saveRecord);
+  $('#btnRecordDelete').addEventListener('click', deleteRecord);
+  $('#btnRecordCancel').addEventListener('click', () => $('#recordModal').classList.add('hidden'));
+
+  // 点击 modal 背景关闭（除了表单）
+  ['customModal','customMenu','customNameModal','presetModal','presetMenu','comboModal','comboMenuModal','calDetailModal','recordModal','roSheet'].forEach(id => {
+    $('#'+id).addEventListener('click', e => { if(e.target.id === id) $('#'+id).classList.add('hidden'); });
+  });
+
+  // 训练中：调整计划
+  $('#btnReorder').addEventListener('click', openReorder);
+  $('#btnRoDone').addEventListener('click', () => {
+    if(!roTemp) return;
+    if(session && session.phase === 'warm'){
+      // 热身阶段：session 和 planData 都整体替换
+      const newItems = roTemp.map(it => ({ ex: it.ex, sets: it.sets, reps: it.reps, rest: it.rest }));
+      session.items = roTemp.map(it => ({...it}));
+      if(planData){ planData.items = newItems; saveState(); }
+    } else if(session){
+      // 训练中/换动作休息：只替换锁定区之后的待开始动作
+      const start = roLockEnd() + 1;
+      session.items.splice(start, session.items.length - start, ...roTemp.slice(start));
+    } else if(planData){
+      // 还没开始 session：整体替换 planData.items
+      planData.items = roTemp.map(it => ({ ex: it.ex, sets: it.sets, reps: it.reps, rest: it.rest }));
+      saveState();
+    }
+    closeReorder();
+    if(session && session.phase === 'work'){
+      renderWork();
+    }else if(session && session.phase === 'rest' && session.restMode === 'transition'){
+      $('#restNext').innerHTML = restNextText();
+    }
+  });
+  $('#roList').addEventListener('click', e => {
+    const b = e.target.closest('[data-promote]');
+    if(!b) return;
+    const idx = +b.dataset.promote;
+    // promote 目标位置：
+    //   热身时：往前挪一格（idx - 1）
+    //   训练中/换动作休息：提到锁定区后的第一位（替换掉"待开始"的那个）
+    const isWarm = session && session.phase === 'warm';
+    const targetIdx = isWarm ? (idx - 1) : (session ? roLockEnd() + 1 : (idx - 1));
+    if(idx <= targetIdx) return;
+
+    const list = $('#roList');
+    const items = list.querySelectorAll('.ro-item');
+    const fromEl = items[idx];
+    const fromRect = fromEl.getBoundingClientRect();
+    const origHeight = fromRect.height + 'px';
+
+    // 克隆浮层 → fixed 定位 + transform（composited，不走 layout）
+    const overlay = fromEl.cloneNode(true);
+    overlay.classList.add('ro-overlay');
+    overlay.style.position = 'fixed';
+    overlay.style.top = fromRect.top + 'px';
+    overlay.style.left = fromRect.left + 'px';
+    overlay.style.width = fromRect.width + 'px';
+    overlay.style.zIndex = '75';
+    overlay.style.transform = 'translateY(0)';
+    overlay.style.transition = 'none';
+    document.body.appendChild(overlay);
+
+    // 隐藏原条目但保留高度，防止重渲时面板塌掉
+    fromEl.style.opacity = '0';
+    fromEl.style.height = origHeight;
+    fromEl.style.overflow = 'hidden';
+
+    roMove(idx, targetIdx);
+    renderReorder();
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const newItems = list.querySelectorAll('.ro-item');
+        const targetEl = newItems[targetIdx];
+        if(!targetEl){ overlay.remove(); return; }
+        const toRect = targetEl.getBoundingClientRect();
+        const delta = toRect.top - fromRect.top;
+        overlay.style.transition = 'transform .32s cubic-bezier(.2,.8,.2,1)';
+        overlay.style.transform = 'translateY(' + delta + 'px)';
+        overlay.addEventListener('transitionend', () => { overlay.remove(); }, { once: true });
+      });
+    });
+  });
+
+  // ro-list 拖拽：已移除（iOS Safari 长按会触发系统级选中，Pointer Events 无法可靠拦截）
+  // 保留 promote 箭头按钮作为唯一调整顺序入口
+
+  /* ================= 初始化 ================= */
+  renderHome();
+  syncWaterLabels();
+  show('home');
+})();
+</script>
+
+
+
+
+
+
+
+
+
+</body></html>
+
